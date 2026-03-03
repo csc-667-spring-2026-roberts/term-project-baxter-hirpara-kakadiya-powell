@@ -8,7 +8,7 @@ CSC 667 Term Project — Spring 2026
 |----------|------------|-------------------|
 | Member 1 | @Deva37    | dhirpara@sfsu.edu |
 | Member 2 | @kpowkitty | kpowell7@sfsu.edu |
-| Member 3 | @username  | email@sfsu.edu    |
+| Member 3 | @yaeger211202  | hkakadiya@sfsu.edu    |
 | Member 4 | @username  | email@sfsu.edu    |
 
 ## Setup
