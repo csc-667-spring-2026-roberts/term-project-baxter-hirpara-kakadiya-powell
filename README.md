@@ -1,15 +1,15 @@
-# Team Name — Game Name
+# Team Name — Texas Hold'em Poker
 
 CSC 667 Term Project — Spring 2026
 
 ## Team Members
 
-| Name     | GitHub     | Email             |
-|----------|------------|-------------------|
-| Member 1 | @Deva37    | dhirpara@sfsu.edu |
-| Member 2 | @kpowkitty | kpowell7@sfsu.edu |
-| Member 3 | @yaeger211202  | hkakadiya@sfsu.edu    |
-| Member 4 | @username  | email@sfsu.edu    |
+| Name     | GitHub         | Email               |
+|----------|----------------|---------------------|
+| Member 1 | @Deva37        | dhirpara@sfsu.edu   |
+| Member 2 | @kpowkitty     | kpowell7@sfsu.edu   |
+| Member 3 | @yaeger211202  | hkakadiya@sfsu.edu  |
+| Member 4 | @agge3         | tbaxter1@sfsu.edu   |
 
 ## Setup
 
