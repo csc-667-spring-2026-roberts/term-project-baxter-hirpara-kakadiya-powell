@@ -11,6 +11,7 @@ dist/
 *.swp
 *.swo
 .DS_Store
+._.DS_Store
 
 # Logs
 *.log
