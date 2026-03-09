@@ -1,6 +1,8 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import usersRouter from "./routes/users.js";
 
 const app = express();
 
@@ -14,10 +16,15 @@ const __dirname = path.dirname(__filename);
 // Serve static files
 app.use(express.static(path.join(__dirname, "..", "public")));
 
+// Parse incoming json payloads
+app.use(express.json());
+
 // Home route
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
+
+app.use("/users", usersRouter);
 
 app.listen(Number(PORT), () => {
   console.log(`Server running at http://localhost:${PORT}`);
