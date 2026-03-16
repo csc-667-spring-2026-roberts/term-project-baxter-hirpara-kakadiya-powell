@@ -1,0 +1,13 @@
+<%# login.ejs - Login page %>
+<%- contentFor('body') %>
+<div class="container">
+	<h1>Login</h1>
+	<form action="/login" method="POST">
+		<input type="text" id="login" name="login" placeholder="email or username" required>
+		<input type="password" id="password" name="password" placeholder="password" required>
+		<button type="submit">Login</button>
+	</form>
+	<p>Don't have an account? <a href="/create-account">Create account</a></p>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

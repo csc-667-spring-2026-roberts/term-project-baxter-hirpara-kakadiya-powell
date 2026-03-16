@@ -1,0 +1,45 @@
+header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.dropdown {
+	position: relative;
+}
+
+.dropdown-menu {
+	display: none;
+	position: absolute;
+}
+
+.dropdown.open .dropdown-menu {
+	display: block;
+}
+
+.flash {
+	padding: 10px;
+	color: white;
+	animation: fadeOut 3s forwards;
+}
+
+.flash.error {
+	background: #c00;
+}
+
+.flash.success {
+	background: #060;
+}
+
+.flash.info {
+	background: #c90;
+}
+
+@keyframes fadeOut {
+	0% { opacity: 1; }
+	50% { opacity: 1; }
+	75% { opacity: 0.5; }
+	100% { opacity: 0; }
+}
+
+/* vim: set ts=2 sw=2 sts=2 noet filetype=css: */

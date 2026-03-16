@@ -1,34 +1,92 @@
-import { Router, Request, Response } from "express";
-import bcrypt from "bcrypt";
-import db from "../db/connection.js";
+import { Router, Request, Response, NextFunction } from "express";
+import logger from "../util/logger.js";
+import UserRepository from "../models/user.js";
+import { TITLE } from "../env.js";
 
 const router = Router();
 
 /* LOGIN */
-router.post("/login", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+// GET route for login page
+router.get("/login", (_req: Request, res: Response) => {
+  res.render("login", {
+    title: `${TITLE} - Login`,
+    styles: ["login"],
+    layout: "layouts/main",
+  });
+});
 
-  const user = await db.oneOrNone("SELECT * FROM users WHERE email=$1", [email]);
+// POST route for logging in
+router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
+  // extract login and password from request
+  const { login, password } = req.body as { login?: string; password?: string };
 
-  if (!user) {
-    return res.status(401).json({ error: "Invalid email or password" });
+  if (!login || !password) {
+    req.flash("error", "Email and password are required");
+    res.redirect("/login"); return;
   }
 
-  const match = await bcrypt.compare(password, user.password);
+  try {
+    const user = await UserRepository.verifyPassword(login, password);
+    if (!user) {
+      req.flash("error", "Invalid email or password");
+      res.redirect("/login"); return;
+    }
+    req.session.userId = user.id;
+    res.redirect("/");
+  } catch (err) {
+    // xxx fix this so we don't have this type check here
+    next(err instanceof Error ? err : new Error(String(err)));
+  }
+});
 
-  if (!match) {
-    return res.status(401).json({ error: "Invalid email or password" });
+/* CREATE ACCOUNT */
+// GET route for create account page
+router.get("/create-account", (_req: Request, res: Response) => {
+  res.render("create-account", {
+    title: `${TITLE} - Create Account`,
+    styles: ["login"],
+    layout: "layouts/main",
+  });
+});
+
+// POST route for creating a new account
+router.post("/create-account", async (req: Request, res: Response, _next: NextFunction) => {
+  // extract email and password from request
+  const { username, email, password } = req.body as {
+    username?: string;
+    email?: string;
+    password?: string;
+  };
+
+  // error check correct state for create-account POST
+  if (!username || !email || !password) {
+    req.flash("error", "Username, email, and password are required");
+    res.redirect("/create-account"); return;
   }
 
-  req.session.userId = user.id;
-
-  res.json({ message: "Login successful" });
+  try {
+    const user = await UserRepository.create({ username, email, password });
+    if (!user) {
+      req.flash("error", "Username or email already exists");
+      res.redirect("/login"); return;
+    }
+    req.session.userId = user.id;
+    res.redirect("/");
+  } catch (err) {
+    logger.error(`Account creation error: ${String(err)}`);
+    req.flash("error", "Error creating account. Please try again.");
+    res.redirect("/create-account"); return;
+  }
 });
 
 /* LOGOUT */
-router.post("/logout", (req: Request, res: Response) => {
-  req.session.destroy(() => {
-    res.json({ message: "Logged out" });
+// POST route for logout
+router.post("/logout", (req: Request, res: Response, next: NextFunction) => {
+  req.session.destroy((err) => {
+    if (err) {
+      next(err); return;
+    }
+    res.redirect("/");
   });
 });
 
