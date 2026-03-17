@@ -2,17 +2,28 @@ import { Request, Response, NextFunction } from "express";
 import logger from "../util/logger.js";
 
 function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  if (!req.session.userId) {
-    logger.warn(
-      `unauthorized access attempt to ${req.originalUrl} from user id: ${req.session.userId ?? "null"}`,
-    );
-    res.redirect("/"); return;
+  if (req.session.userId) {
+    // let through
+    next();
+    return;
   }
-  next();
+
+  // invalid auth handling:
+  logger.warn(
+    `unauthorized access attempt to ${req.originalUrl} from user id: ${req.session.userId ?? "null"}`,
+  );
+
+  // save previous url
+  req.session.returnTo = req.originalUrl;
+  // redirect to login (after login, will restore saved url user intended)
+  res.redirect("/login");
 }
 
 /**
  * Central error handling middleware
+ * Two states:
+ *  1. minor, page can still be rendered => flash message popup
+ *  2. HttpError, page cannot be rendered => error handler
  */
 function errorHandler(
   err: Error & { status?: number },

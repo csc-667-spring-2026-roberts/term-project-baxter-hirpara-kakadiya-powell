@@ -14,6 +14,8 @@ import GameRepository from "./models/game.js";
 import { PORT, CMDS } from "./env.js";
 import { errorHandler } from "./routes/middleware.js";
 import expressLayouts from "express-ejs-layouts";
+import publicRouter from "./routes/public.js";
+import gameRouter from "./routes/game.js";
 
 const app = express();
 
@@ -108,16 +110,18 @@ app.use(async (req, res, next) => {
   try {
     const user = await UserRepository.findById(id);
     if (!user) {
-      return req.session.destroy(() => {
+      req.session.destroy(() => {
         res.redirect("/login?cmd=expire");
       });
+      return;
     }
     res.locals.user = user;
   } catch (err) {
     logger.error(String(err));
-    return req.session.destroy(() => {
+    req.session.destroy(() => {
       res.redirect("/login?cmd=expire");
     });
+    return;
   }
 
   // non-fatal db lookup errors:
@@ -131,7 +135,9 @@ app.use(async (req, res, next) => {
 });
 
 // public routes:
+app.use("/", publicRouter);
 app.use("/", authRouter);
+app.use("/", gameRouter);
 
 // api routes:
 app.use("/api", usersRouter);

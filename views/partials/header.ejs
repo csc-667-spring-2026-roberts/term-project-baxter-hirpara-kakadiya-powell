@@ -5,8 +5,8 @@
 		<button class="dropdown-toggle">My Games</button>
 		<div class="dropdown-menu">
 			<% if (locals.games && locals.games.length > 0) { %>
-			  <% locals.games.forEach(function(game) { %>
-					<a href="/game/<%= game.id %>"><%= locals.game.name %></a>
+			  <% locals.games.forEach(function(e) { %>
+					<a href="/game/<%= e.id %>"><%= e.name %></a>
 			  <% }); %>
 			<% } else { %>
 				<span>No active games</span>
