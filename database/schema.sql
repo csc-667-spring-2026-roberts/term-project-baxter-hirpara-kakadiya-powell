@@ -27,6 +27,7 @@ CREATE TABLE games(
 	max_seats INT NOT NULL,
 	small_blind decimal(12, 2) NOT NULL,
 	big_blind decimal(12, 2) NOT NULL,
+	last_raise_amount decimal(12, 2) NOT NULL DEFAULT 0,
 	deck_position INT NOT NULL
 );
 
