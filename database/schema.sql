@@ -1,6 +1,15 @@
--- tmp table before full schema, for testing
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  username TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE users (
+	id UUID PRIMARY KEY,
+	username VARCHAR NOT NULL UNIQUE,
+	email VARCHAR NOT NULL UNIQUE,
+	password VARCHAR NOT NULL,
+	balance DECIMAL NOT NULL DEFAULT 0,
+	created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE "session" (
+	"sid" VARCHAR NOT NULL PRIMARY KEY,
+	"sess" JSON NOT NULL,
+	"expire" TIMESTAMP(6) NOT NULL
+);
+CREATE INDEX "IDX_session_expire" ON "session" ("expire");

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Demo</title>
+</head>
+<body>
+
+<h1>Poker Game</h1>
+
+<!-- Login Form -->
+<div id="login-section">
+  <h2>Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="login()">Login</button>
+</div>
+
+<!-- Member Content -->
+<div id="member-section" style="display:none;">
+  <h2>Member Content</h2>
+  <p>You are logged in.</p>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+
+async function login() {
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  if (res.ok) {
+    document.getElementById("login-section").style.display = "none";
+    document.getElementById("member-section").style.display = "block";
+  } else {
+    alert("Login failed");
+  }
+}
+
+async function logout() {
+
+  await fetch("/auth/logout", {
+    method: "POST"
+  });
+
+  document.getElementById("member-section").style.display = "none";
+  document.getElementById("login-section").style.display = "block";
+}
+
+</script>
+
+</body>
+</html>

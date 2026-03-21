@@ -16,19 +16,13 @@ export default tseslint.config(
     rules: {
       // Complexity rules
       complexity: ["error", 15],
-      "max-lines-per-function": [
-        "error",
-        { max: 75, skipBlankLines: true, skipComments: true },
-      ],
+      "max-lines-per-function": ["error", { max: 75, skipBlankLines: true, skipComments: true }],
       "max-nested-callbacks": ["error", 4],
       "max-depth": ["error", 4],
 
       // Code quality
       "no-console": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_" },
-      ],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/explicit-function-return-type": "error",
       "@typescript-eslint/no-explicit-any": "error",
 
@@ -38,5 +32,5 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-member-access": "warn",
     },
   },
-  { ignores: ["dist/", "node_modules/", "*.js"] }
+  { ignores: ["dist/", "node_modules/", "*.js"] },
 );

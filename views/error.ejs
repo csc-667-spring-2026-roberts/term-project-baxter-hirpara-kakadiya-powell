@@ -1,0 +1,17 @@
+<%# error.ejs - Error page %>
+<%- contentFor('body') %>
+<div class='container'>
+	<h1>Error <%= error.status %></h1>
+	<p><%= error.message %></p>
+
+	<% if (process.env.NODE_ENV !== 'production') { %>
+		<% if (error.stack) { %>
+			<h2>Stack Trace</h2>
+			<pre><%= error.stack %></pre>
+		<% } %>
+	<% } %>
+
+	<p><a href='/'>Back to Home</a></p>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

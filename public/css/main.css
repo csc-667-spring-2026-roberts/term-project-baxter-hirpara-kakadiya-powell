@@ -1,0 +1,77 @@
+/* reset all browser css */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+	font-family: system-ui, sans-serif;
+	background: #1a1a2e;
+	color: #e0e0e0;
+	line-height: 1.6;
+}
+
+button, input {
+	font: inherit;
+	color: inherit;
+	padding: 0.5rem 0.8rem;
+	border: 1px solid #333;
+	border-radius: 4px;
+	background: #16213e;
+}
+
+button {
+	cursor: pointer;
+	color: #fff;
+	background: #e94560;
+	border-color: #e94560;
+}
+
+input { width: 100%; }
+input::placeholder { color: #888; }
+input:focus { outline: none; border-color: #e94560; }
+
+.container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+.form-group { margin-bottom: 1rem; }
+
+header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.8rem 1.5rem;
+	background: #16213e;
+}
+
+/* dropdowns */
+.dropdown {
+	position: relative;
+}
+.dropdown-menu {
+	display: none;
+	position: absolute;
+}
+.dropdown.open .dropdown-menu {
+	display: block;
+}
+
+/* flash messages */
+.flash {
+	padding: 10px;
+	color: white;
+	animation: fadeOut 3s forwards;
+}
+.flash.error {
+	background: #c00;
+}
+.flash.success {
+	background: #060;
+}
+.flash.info {
+	background: #c90;
+}
+
+@keyframes fadeOut {
+	0% { opacity: 1; }
+	50% { opacity: 1; }
+	75% { opacity: 0.5; }
+	100% { opacity: 0; }
+}
+
+/* vim: set ts=2 sw=2 sts=2 noet filetype=css: */
