@@ -49,11 +49,12 @@ fi
 
 # only format tracked files
 SRC_DIR="$APP_ROOT"
+DB_DIR="$APP_ROOT/database"
 
 FMT_FAILED=0
 LINT_FAILED=0
 
-# BEGIN:
+# BEGIN: frontend
 trap popd EXIT
 pushd "$SRC_DIR"
 NODE_BIN="$APP_ROOT/node_modules/.bin"
@@ -87,7 +88,52 @@ if [[ ${#FRONTEND_FILES[@]} -gt 0 ]]; then
 	done
 fi
 
-# END:
+# END: frontend
+popd
+trap - EXIT
+
+# BEGIN: database
+PG_FMT_IMG="darold.net/pgformatter"
+DB_FMT=(-T -u 2 -U 2 -f 1 -t -k -L -B --no-space-function)
+
+trap popd EXIT
+pushd "$DB_DIR"
+mapfile -t DB_FILES < <(git ls-files "*.sql")
+
+ilog "validating docker"
+if ! command -v docker &>/dev/null; then
+	elog "docker not found"
+	exit 1
+fi
+
+if ! docker image inspect "$PG_FMT_IMG" &>/dev/null; then
+	ilog "pg_format image not found, building..."
+	(
+		TMP_DIR=$(mktemp -d)
+		trap 'rm -rvf "$TMP_DIR"' EXIT
+		git clone --depth 1 https://github.com/darold/pgFormatter.git "$TMP_DIR"
+		docker build -t "$PG_FMT_IMG" "$TMP_DIR"
+	)
+fi
+
+ilog "formatting and linting DB: $DB_DIR"
+if [[ ${#DB_FILES[@]} -gt 0 ]]; then
+	for f in "${DB_FILES[@]}"; do
+		if [[ $FMT == true ]]; then
+			ilog "applying sql formatter (pg_format): $f"
+			tmpf=$(mktemp)
+			if docker run --rm -a stdin -a stdout -i "$PG_FMT_IMG" "${DB_FMT[@]}" - <"$f" >"$tmpf"; then
+				mv "$tmpf" "$f"
+			else
+				rm -vf "$tmpf"
+				elog "FAIL: please correct formatting issues: $f"
+				FMT_FAILED=$((FMT_FAILED + 1))
+			fi
+		fi
+	done
+fi
+
+# END: database
 popd
 trap - EXIT
 
