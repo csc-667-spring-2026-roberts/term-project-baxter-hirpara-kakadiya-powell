@@ -1,4 +1,3 @@
- 
 /**
  * @file mock.ts
  * @author Tyler Baxter, generated with Claude Opus 4.6 by Anthropic
@@ -12,12 +11,13 @@ import { GameStatus, UserStatus, CardLocation, Action } from "./env.js";
 // users
 export const MOCK_USER: User = {
   id: "00000000-0000-0000-0000-000000000001",
-  username: "testuser",
+  username: "test",
   email: "test@sfsu.edu",
-  password: "hashed",
+  password: "$2b$10$Bz.aoRonrbkFtl23cu5sWOUQt5g5l9V5AiuD/1nnfqV9dv2RnLP8C",
   balance: 1000,
   created_at: new Date(),
 };
+// login: email: test@sfsu.edu, password: test
 
 export const MOCK_USER2: User = {
   id: "00000000-0000-0000-0000-000000000002",
@@ -57,7 +57,7 @@ export const MOCK_GAME: Game = {
 };
 
 export const MOCK_GAME2: Game = {
-  id: "00000000-0000-0000-0000-000000000001",
+  id: "00000000-0000-0000-0000-000000000011",
   status: GameStatus.PLAYING,
   created_at: new Date(),
   ended_at: null,
@@ -96,6 +96,7 @@ export const MOCK_GAME_USERS: GameUser[] = [
   {
     game_id: MOCK_GAME.id,
     user_id: MOCK_USER.id,
+    username: MOCK_USER.username,
     seat_no: 1,
     balance: 88,
     status: UserStatus.ACTIVE,
@@ -105,6 +106,7 @@ export const MOCK_GAME_USERS: GameUser[] = [
   {
     game_id: MOCK_GAME.id,
     user_id: MOCK_USER2.id,
+    username: MOCK_USER2.username,
     seat_no: 2,
     balance: 95,
     status: UserStatus.ACTIVE,
@@ -114,6 +116,7 @@ export const MOCK_GAME_USERS: GameUser[] = [
   {
     game_id: MOCK_GAME.id,
     user_id: MOCK_USER3.id,
+    username: MOCK_USER3.username,
     seat_no: 3,
     balance: 100,
     status: UserStatus.ACTIVE,
@@ -127,6 +130,20 @@ export const MOCK_GAME_CARDS: GameCard[] = [
   { game_id: MOCK_GAME.id, position: 6, card: 12, location: CardLocation.COMMUNITY, user_id: null },
   { game_id: MOCK_GAME.id, position: 7, card: 37, location: CardLocation.COMMUNITY, user_id: null },
   { game_id: MOCK_GAME.id, position: 8, card: 4, location: CardLocation.COMMUNITY, user_id: null },
+  {
+    game_id: MOCK_GAME.id,
+    position: 0,
+    card: 25,
+    location: CardLocation.HAND,
+    user_id: MOCK_USER.id,
+  },
+  {
+    game_id: MOCK_GAME.id,
+    position: 1,
+    card: 38,
+    location: CardLocation.HAND,
+    user_id: MOCK_USER.id,
+  },
 ];
 
 // game actions
@@ -165,6 +182,7 @@ export const MOCK_GAME_MESSAGES: Message[] = [
   {
     id: 1,
     user_from: MOCK_USER.id,
+    username: MOCK_USER.username,
     game_id: MOCK_GAME.id,
     user_to: null,
     body: "gl everyone",
@@ -173,6 +191,7 @@ export const MOCK_GAME_MESSAGES: Message[] = [
   {
     id: 2,
     user_from: MOCK_USER2.id,
+    username: MOCK_USER2.username,
     game_id: MOCK_GAME.id,
     user_to: null,
     body: "ty u2",
@@ -181,6 +200,7 @@ export const MOCK_GAME_MESSAGES: Message[] = [
   {
     id: 3,
     user_from: MOCK_USER3.id,
+    username: MOCK_USER3.username,
     game_id: MOCK_GAME.id,
     user_to: null,
     body: "lets go",
@@ -192,6 +212,7 @@ export const MOCK_DMS: Message[] = [
   {
     id: 10,
     user_from: MOCK_USER.id,
+    username: MOCK_USER.username,
     game_id: null,
     user_to: MOCK_USER2.id,
     body: "gg last game",
@@ -200,6 +221,7 @@ export const MOCK_DMS: Message[] = [
   {
     id: 11,
     user_from: MOCK_USER2.id,
+    username: MOCK_USER2.username,
     game_id: null,
     user_to: MOCK_USER.id,
     body: "yeah wp",

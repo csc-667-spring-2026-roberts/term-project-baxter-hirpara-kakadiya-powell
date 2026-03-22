@@ -1,0 +1,28 @@
+<%# partials/chat.ejs - Site-wide chat bar (logged-in users only) %>
+<div id="chat-bar">
+	<!-- chat popup above the chat button, when open -->
+	<div id="chat-popout" class="chat-closed">
+		<div id="chat-tabs">
+			<!-- xxx need js to remember last active for this session -->
+			<button class="chat-tab active" data-tab="game">Game</button>
+			<button class="chat-tab" data-tab="messages">Messages</button>
+		</div>
+
+		<!-- chat message pane -->
+		<div id="chat-messages">
+		</div>
+
+		<!-- chat input section -->
+		<div id="chat-input-bar">
+			<form id="chat-form">
+				<input type="text" id="chat-input" placeholder="" maxlength="100" autocomplete="off">
+			</form>
+		</div>
+	</div>
+
+	<div class="chat-bar-group">
+		<button id="chat-button">Chat</button>
+	</div>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

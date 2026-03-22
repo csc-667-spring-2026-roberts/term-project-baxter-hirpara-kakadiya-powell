@@ -13,7 +13,14 @@ import logger from "../util/logger.js";
 import { validatePosition } from "../util/util.js";
 import { RollbackError } from "../util/error.js";
 import { DECK_SIZE, GameStatus, UserStatus, Action, CardLocation } from "../env.js";
-import { MOCK_USER, MOCK_GAME, MOCK_GAMES, MOCK_GAME_USERS, MOCK_GAME_ACTIONS } from "../mock.js";
+import {
+  MOCK_USER,
+  MOCK_GAME,
+  MOCK_GAMES,
+  MOCK_GAME_USERS,
+  MOCK_GAME_ACTIONS,
+  MOCK_GAME_CARDS,
+} from "../mock.js";
 import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
 
 /**
@@ -80,7 +87,7 @@ class GameRepository implements IRepository<Game> {
 
   /** get a specific player in a game */
   async getUser(_gameId: string, _userId: string): Promise<GameUser | null> {
-    return MOCK_USER;
+    return MOCK_GAME_USERS[0] ?? null;
   }
 
   /** update a User's balance (after bet/payout) */
@@ -207,18 +214,18 @@ class GameRepository implements IRepository<Game> {
   }
 
   /** get a user's hand */
-  async getHand(_gameId: string, _userId: string): Promise<GameCard[] | null> {
-    return null;
+  async getHand(_gameId: string, _userId: string): Promise<GameCard[]> {
+    return MOCK_GAME_CARDS.filter((c: GameCard) => c.location === CardLocation.HAND);
   }
 
   /** get community cards (flop, turn, river) */
-  async getCommunityCards(_gameId: string): Promise<GameCard[] | null> {
-    return null;
+  async getCommunityCards(_gameId: string): Promise<GameCard[]> {
+    return MOCK_GAME_CARDS.filter((c: GameCard) => c.location === CardLocation.COMMUNITY);
   }
 
   /** get all cards for a game */
-  async getAllCards(_gameId: string): Promise<GameCard[] | null> {
-    return null;
+  async getAllCards(_gameId: string): Promise<GameCard[]> {
+    return [];
   }
 
   /**

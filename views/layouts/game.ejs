@@ -6,7 +6,7 @@
 	<%- include('../partials/head') %>
 </head>
 
-<body>
+<body class="game-body">
 	<!-- header -->
 	<%- include('../partials/header.ejs') %>
 
@@ -30,8 +30,12 @@
 	<!-- full-viewport for game -->
 	<main class='game-viewport'><%- body %></main>
 
-	<!-- footer -->
-	<%- include('../partials/footer.ejs') %>
+	<!-- chat (if logged in) -->
+	<% if (locals.user) { %>
+	<%- include('../partials/chat.ejs') %>
+	<% } %>
+
+  <script src="/js/game.js" defer></script>
 </body>
 
 </html>

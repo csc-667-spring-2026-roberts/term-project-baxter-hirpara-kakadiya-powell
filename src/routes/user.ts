@@ -6,8 +6,6 @@
  * User routes.
  */
 
-//eslint-disable @typescript-eslint/require-await */
-
 import { Router, Request, Response } from "express";
 import { requireAuth } from "./middleware.js";
 
@@ -16,8 +14,8 @@ const router = Router();
 /**
  * Render authenticated user's profile page.
  */
-router.get("profile", requireAuth, (_req: Request, res: Response) => {
-  res.render("/profile");
+router.get("/profile", requireAuth, (_req: Request, res: Response) => {
+  res.render("profile");
 });
 
 export default router;

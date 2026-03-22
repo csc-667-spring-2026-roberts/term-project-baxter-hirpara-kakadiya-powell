@@ -11,6 +11,7 @@
 import { IRepository, Message } from "./types.js";
 //import db from "../db/connection.js";
 //import logger from "../util/logger.js";
+import { MOCK_GAME_MESSAGES } from "../mock.js";
 
 /**
  * Message repository.
@@ -37,28 +38,34 @@ class MessageRepository implements IRepository<Message> {
   }
 
   /** get all messages for a game lobby */
-  async getGame(_gameId: string): Promise<Message[] | null> {
-    return null;
+  async getGame(_gameId: string): Promise<Message[]> {
+    return MOCK_GAME_MESSAGES;
   }
 
-  /** get DM conversation between two users */
+  /**
+   * Get DM conversation between two users. Result may be null, because we
+   * shouldn't find an empty messages array between two users if they've never
+   * messaged.
+   *
+   * @returns An array of Messages, or null if no messages.
+   */
   async getPrivate(_userId1: string, _userId2: string): Promise<Message[] | null> {
     return null;
   }
 
   /** get all DMs received by a user */
-  async getReceived(_userId: string): Promise<Message[] | null> {
-    return null;
+  async getReceived(_userId: string): Promise<Message[]> {
+    return [];
   }
 
   /** get all DMs sent by a user */
-  async getSent(_userId: string): Promise<Message[] | null> {
-    return null;
+  async getSent(_userId: string): Promise<Message[]> {
+    return [];
   }
 
   /** get all unique conversations for a user (inbox) */
-  async getInbox(_userId: string): Promise<Message[] | null> {
-    return null;
+  async getInbox(_userId: string): Promise<Message[]> {
+    return [];
   }
 }
 

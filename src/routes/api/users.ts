@@ -20,7 +20,7 @@ const router = Router();
  *
  * @param  username  username of the user you want to query
  */
-router.get("/users/:username", (req: Request, res: Response) => {
+router.get("/users/:username", (_req: Request, res: Response) => {
   // xxx respond as json so we can do popup to show user
   res.json(null);
 });

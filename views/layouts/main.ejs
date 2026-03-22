@@ -30,6 +30,11 @@
 	<!-- body -->
 	<main class='container'><%- body %></main>
 
+	<!-- chat (if logged in) -->
+	<% if (locals.user) { %>
+	<%- include('../partials/chat.ejs') %>
+	<% } %>
+
 	<!-- footer -->
 	<%- include('../partials/footer.ejs') %>
 </body>

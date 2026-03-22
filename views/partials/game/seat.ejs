@@ -1,0 +1,25 @@
+<%# partials/game/seat.ejs - Player seat %>
+
+<% var seatPlayer = locals.players ? locals.players.find(p => p.seat_no === seatNo ) : null %>
+<div class="seat seat-<%= seatNo %>" id="seat-<%= seatNo %>" data-seat="<%= seatNo %>">
+	<div class="seat-cards">
+		<% if (seatPlayer) { %>
+		<div class="card-slot" data-card-back></div>
+		<div class="card-slot" data-card-back></div>
+		<% } %>
+	</div>
+	<div class="seat-info">
+		<% if (seatPlayer) { %>
+		<%- include('../avatar', { user: seatPlayer, size: 'sm' }) %>
+		<p class="seat-username"><%= seatPlayer.username %></p>
+		<p class="seat-balance money">$<%= seatPlayer.balance %></p>
+		<% } else { %>
+		<span class="seat-username">Empty</span>
+		<% } %>
+	</div>
+	<% if (seatPlayer && seatPlayer.is_dealer) { %>
+	<div class="seat-dealer">(D)</div>
+	<% } %>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

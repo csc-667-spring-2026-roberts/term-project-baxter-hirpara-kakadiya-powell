@@ -68,3 +68,9 @@ dlog() {
 	fi
 }
 export -f dlog
+
+export CONTAINER_NAME="poker-db"
+export DB_PORT=5432
+export DB_USER="poker"
+export DB_PASS="poker"
+export DB_NAME="poker_dev"
