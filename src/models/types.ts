@@ -6,6 +6,8 @@
  * Model and repository types.
  */
 
+import { CardLocation } from "../env.js";
+
 /**
  * Generic repository contract for base CRUD operations.
  */
@@ -53,6 +55,8 @@ export interface Game {
 export interface GameUser {
   game_id: string;
   user_id: string;
+  // not in db, but always join with user table to look this up, since the
+  // user_id's username should be metadata for a GameUser.
   seat_no: number;
   balance: number;
   status: number;
@@ -67,7 +71,7 @@ export interface GameCard {
   game_id: string;
   position: number;
   card: number;
-  location: number;
+  location: CardLocation;
   user_id: string | null;
 }
 
@@ -91,6 +95,9 @@ export interface GameAction {
 export interface Message {
   id: number;
   user_from: string;
+  // not in db, but always join with user table to look this up, since the
+  // user_from's username should be metadata for a Message.
+  username: string;
   game_id: string | null;
   user_to: string | null;
   body: string;

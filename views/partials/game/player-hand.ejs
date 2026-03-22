@@ -1,0 +1,10 @@
+<%# partials/game/player-hand.ejs - Player hand %>
+<% if (player && hand) { %>
+<div id="player-hand-bar" class="game-bar">
+	<% hand.forEach((gc, idx) => { %>
+	<div class="card-slot" id="hand-card-<%= idx %>" data-card="<%= gc.card %>"></div>
+	<% }); %>
+</div>
+<% } %>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

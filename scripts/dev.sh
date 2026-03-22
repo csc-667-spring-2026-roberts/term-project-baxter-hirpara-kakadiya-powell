@@ -2,11 +2,8 @@
 
 set -euo pipefail
 
-CONTAINER_NAME="poker-db"
-DB_PORT=5432
-DB_USER="poker"
-DB_PASS="poker"
-DB_NAME="poker_dev"
+APP_ROOT="$(git rev-parse --show-toplevel)"
+source "$APP_ROOT/scripts/env.sh"
 
 # Start container if not already running
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then

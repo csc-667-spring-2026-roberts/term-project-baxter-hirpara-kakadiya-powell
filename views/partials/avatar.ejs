@@ -1,0 +1,8 @@
+<%# partials/avatar.ejs - User avatar %>
+<% if (user && size) { %>
+<div class="avatar-<%= size %>">
+	<%= user.username.charAt(0).toUpperCase() %>
+</div>
+<% } %>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

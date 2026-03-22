@@ -37,7 +37,9 @@ export function shuffleDeck(): number[] {
   for (let i = deck.length - 1; i >= 1; i--) {
     // CSPRNG
     const j = crypto.randomInt(0, i + 1);
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    // i, j are always bounded
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    [deck[i], deck[j]] = [deck[j]!, deck[i]!];
   }
 
   return deck;

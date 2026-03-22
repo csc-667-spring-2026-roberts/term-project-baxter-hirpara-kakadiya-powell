@@ -6,12 +6,32 @@
  * Message API routes.
  */
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth } from "../middleware.js";
-// import MessageRepository from "../../models/message.js";
+import MessageRepository from "../../models/message.js";
 import { GameParams } from "../../types.js";
+import logger from "../../util/logger.js";
 
 const router = Router();
+
+/**
+ * Get game chat messages.
+ */
+router.get(
+  "/games/:id/messages",
+  requireAuth,
+  async (req: Request<GameParams>, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+
+    try {
+      const msgs = await MessageRepository.getGame(id);
+      res.json(msgs);
+    } catch (err) {
+      logger.error(String(err));
+      next(err);
+    }
+  },
+);
 
 /**
  * Send game chat message.
