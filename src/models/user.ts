@@ -9,21 +9,9 @@
 import bcrypt from "bcrypt";
 import db from "../db/connection.js";
 import logger from "../util/logger.js";
-import IRepository from "./repository.js";
+import { User, IRepository } from "./types.js";
 
 const SALT_ROUNDS = 10;
-
-/**
- * User model.
- */
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  balance: number;
-  created_at: Date;
-}
 
 /**
  * User repository.
@@ -35,6 +23,11 @@ class UserRepository implements IRepository<User> {
    * @returns The user object or null if not found
    */
   async findById(id: string): Promise<User | null> {
+    if (!id) {
+      logger.warn(`invalid id: ${id}`);
+      return null;
+    }
+
     try {
       // db call
       return await db.oneOrNone("SELECT * FROM users WHERE id = $1", [id]);
@@ -269,9 +262,38 @@ class UserRepository implements IRepository<User> {
       throw err;
     }
   }
+
+  /**
+   * Update a user's balance with a delta
+   * @param id - The user's id
+   * @param delta - The delta from the old balance
+   */
+  async updateBalance(id: string, delta: number): Promise<boolean> {
+    if (!id) {
+      logger.warn(`invalid id: ${id}`);
+      return false;
+    }
+
+    try {
+      const result = await db.result("UPDATE users SET balance = balance + $1 WHERE id = $2", [
+        delta,
+        id,
+      ]);
+
+      if (result.rowCount <= 0) {
+        logger.warn(`user with id (${id}) not found`);
+        return false;
+      }
+
+      logger.debug(`Success - Updated ${String(result.rowCount)} row(s)`);
+      return true;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+  }
 }
 
-export { User };
 export default new UserRepository();
 
 // vim: set ts=2 sw=2 sts=2 noet filetype=typescript:

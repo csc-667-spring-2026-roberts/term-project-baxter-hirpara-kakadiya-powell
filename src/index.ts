@@ -16,6 +16,9 @@ import { errorHandler } from "./routes/middleware.js";
 import expressLayouts from "express-ejs-layouts";
 import publicRouter from "./routes/public.js";
 import gameRouter from "./routes/game.js";
+import gamesRouter from "./routes/api/games.js";
+import messagesRouter from "./routes/api/messages.js";
+import userRouter from "./routes/user.js";
 
 const app = express();
 
@@ -138,9 +141,12 @@ app.use(async (req, res, next) => {
 app.use("/", publicRouter);
 app.use("/", authRouter);
 app.use("/", gameRouter);
+app.use("/", userRouter);
 
 // api routes:
 app.use("/api", usersRouter);
+app.use("/api", gamesRouter);
+app.use("/api", messagesRouter);
 
 app.use(errorHandler);
 

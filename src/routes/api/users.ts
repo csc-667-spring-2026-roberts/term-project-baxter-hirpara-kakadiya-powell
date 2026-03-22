@@ -1,45 +1,80 @@
+/**
+ * @file routes/api/user.ts
+ * @author Kat Powell, Tyler Baxter
+ * @date 2026-03-08
+ * @modified 2026-03-21
+ *
+ * User API routes.
+ */
+
 import { Router, Request, Response } from "express";
-import db from "../../db/connection.js";
-import { User } from "../../models/user.js";
+//import { User } from "../models/user.js";
+//import UserRepository from "../models/user.js";
+import { requireAuth } from "../middleware.js";
 
 const router = Router();
 
 /**
  * Retrieve user information by username.
+ * xxx
  *
  * @param  username  username of the user you want to query
  */
-router.get("/:username", async (req: Request, res: Response): Promise<void> => {
-  const user: User | null = await db.oneOrNone("SELECT * FROM users WHERE username = $1", [
-    req.params.username,
-  ]);
+router.get("/users/:username", (req: Request, res: Response) => {
+  // xxx respond as json so we can do popup to show user
+  res.json(null);
+});
 
-  if (!user) {
-    res.status(404).json({ error: "user not found" });
-    return;
-  }
-
-  res.json(user);
+/**
+ * Retrieve user information by id.
+ * xxx
+ *
+ * @param id id of the user you want to query
+ */
+router.get("/users/:id", (_req: Request, res: Response) => {
+  res.json(null);
 });
 
 /**
  * Update a user's username.
+ * xxx
  *
  * @param  username  user's requested username
  */
-// xxx add back async
-router.post("/", (req: Request, res: Response): void => {
-  const { username } = req.body as { username?: string };
+router.post("/users/:id/username", requireAuth, (_req: Request, res: Response) => {
+  res.redirect("back");
+});
 
-  if (!username) {
-    res.status(400).json({ error: "username is required" });
-    return;
-  }
+/**
+ * Update user email.
+ * xxx
+ */
+router.post("/users/:id/email", requireAuth, (_req: Request, res: Response) => {
+  res.redirect("back");
+});
 
-  // xxx update to user model
-  const user = null;
-  //const user = await db.one("INSERT INTO users (username) VALUES ($1) RETURNING *", [username]);
-  res.status(201).json(user);
+/**
+ * Update user password.
+ * xxx
+ */
+router.post("/users/:id/password", requireAuth, (_req: Request, res: Response) => {
+  res.redirect("back");
+});
+
+/**
+ * User's game history.
+ * xxx STRETCH
+ */
+router.get("/users/:id/games", (_req: Request, res: Response) => {
+  res.render("/");
+});
+
+/**
+ * User's balance history.
+ * xxx STRETCH
+ */
+router.get("/users/:id/balance", (_req: Request, res: Response) => {
+  res.render("/");
 });
 
 export default router;
