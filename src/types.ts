@@ -12,3 +12,11 @@ declare module "express-session" {
     returnTo?: string;
   }
 }
+
+export type GameParams = {
+  id: string;
+};
+
+export type UserParams = {
+  id: string;
+};

@@ -1,5 +1,5 @@
 /**
- * @file routes/public.ts
+ * @file routes/auth.ts
  * @author Tyler Baxter, Kat Powell, Devarsh Hirpara
  * @date 2026-03-16
  *

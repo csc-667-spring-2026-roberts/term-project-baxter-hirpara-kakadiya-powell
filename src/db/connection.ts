@@ -18,4 +18,5 @@ const db: IDatabase<Record<string, never>> = pgp({
   connectionString: DATABASE_URL,
 });
 
+export { pgp };
 export default db;

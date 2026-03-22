@@ -17,3 +17,8 @@ export class HttpError extends Error {
     super(message);
   }
 }
+
+/**
+ * Wrapper to typecheck DB RollbackErrors
+ */
+export class RollbackError extends Error {}

@@ -47,25 +47,28 @@ if [[ $FMT == false && $LINT == false ]]; then
 	exit 0
 fi
 
-# only format tracked files
-SRC_DIR="$APP_ROOT"
-DB_DIR="$APP_ROOT/database"
+NODE_BIN="$APP_ROOT/node_modules/.bin"
 
 FMT_FAILED=0
 LINT_FAILED=0
 
+# only format tracked files
+SRC_DIR="$APP_ROOT"
+DB_DIR="$APP_ROOT/database"
+EJS_DIR="$APP_ROOT/views"
+
+ilog "validating node binaries..."
+if [[ ! -f "$NODE_BIN/eslint" ]] ||
+	[[ ! -f "$NODE_BIN/prettier" ]] ||
+	[[ ! -f "$NODE_BIN/js-beautify" ]]; then
+	ilog "node binaries not found, installing..."
+	npm install --save-dev --quiet eslint prettier js-beautify
+fi
+
 # BEGIN: frontend
 trap popd EXIT
 pushd "$SRC_DIR"
-NODE_BIN="$APP_ROOT/node_modules/.bin"
-mapfile -t FRONTEND_FILES < <(git ls-files "*.js" "*.ts" "*.jsx" "*.tsx")
-
-ilog "validating node binaries: $SRC_DIR"
-if [[ ! -f "$NODE_BIN/eslint" ]] ||
-	[[ ! -f "$NODE_BIN/prettier" ]]; then
-	ilog "node binaries not found: $SRC_DIR"
-	npm install --save-dev --quiet eslint prettier
-fi
+mapfile -t FRONTEND_FILES < <(git ls-files "*.js" "*.ts" "*.jsx" "*.tsx" "*.css")
 
 ilog "formatting and linting frontend: $SRC_DIR"
 if [[ ${#FRONTEND_FILES[@]} -gt 0 ]]; then
@@ -89,6 +92,29 @@ if [[ ${#FRONTEND_FILES[@]} -gt 0 ]]; then
 fi
 
 # END: frontend
+popd
+trap - EXIT
+
+# BEGIN: ejs views
+EJS_FMT=(--type html --templating erb --indent-with-tabs)
+trap popd EXIT
+pushd "$EJS_DIR"
+mapfile -t EJS_FILES < <(git ls-files "*.ejs")
+
+ilog "formatting and linting ejs views: $EJS_DIR"
+if [[ ${#EJS_FILES[@]} -gt 0 ]]; then
+	for f in "${EJS_FILES[@]}"; do
+		if [[ $FMT == true ]]; then
+			ilog "applying node formatter (js-beautify): $f"
+			if ! "$NODE_BIN/js-beautify" "${EJS_FMT[@]}" --replace "$f"; then
+				elog "FAIL: please correct formatting issues: $f"
+				FMT_FAILED=$((FMT_FAILED + 1))
+			fi
+		fi
+	done
+fi
+
+# END: ejs views
 popd
 trap - EXIT
 
