@@ -118,24 +118,65 @@ class GameRepository implements IRepository<Game> {
     }
 }
 
-  async findByUserId(_userId: string): Promise<Game[] | null> {
-    return MOCK_GAMES;
+async findByUserId(userId: string): Promise<Game[] | null> {
+  if (!userId) {
+    logger.warn(`invalid userId: ${userId}`);
+    return null;
   }
+  try {
+    return await db.manyOrNone<Game>(
+      `SELECT g.* FROM games g
+       JOIN game_users gu ON g.id = gu.game_id
+       WHERE gu.user_id = $1
+       ORDER BY g.created_at DESC`,
+      [userId],
+    );
+  } catch (err) {
+    logger.error(String(err));
+    throw err;
+  }
+}
 
   /**
    * Find available games matching blind levels, sorted on index
    * IDX_games_status_created_at.
    */
-  async findAvailableBlind(_smallBlind: number, _bigBlind: number): Promise<Game[] | null> {
-    return MOCK_GAMES;
-  }
+  async findAvailableBlind(smallBlind: number, bigBlind: number): Promise<Game[] | null> {
+    if (!smallBlind || !bigBlind) {
+      logger.warn(`invalid smallBlind or bigBlind`);
+      return null;
+    }
+    try {
+      return await db.manyOrNone<Game>(
+        `SELECT * FROM games
+         WHERE status = $1
+         AND small_blind = $2
+         AND big_blind = $3
+         ORDER BY created_at`,
+        [GameStatus.WAITING, smallBlind, bigBlind],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /**
    * Find all available games, sorted on index IDX_games_status_created_at.
    */
   async findAvailableAll(): Promise<Game[] | null> {
-    return MOCK_GAMES;
-  }
+    try {
+      return await db.manyOrNone<Game>(
+        `SELECT * FROM games
+         WHERE status = $1
+         ORDER BY created_at`,
+        [GameStatus.WAITING],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /** add a player to a game, deduct buy-in from user balance */
   async addUser(
