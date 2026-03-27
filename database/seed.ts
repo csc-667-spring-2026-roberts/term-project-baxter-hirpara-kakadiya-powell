@@ -1,8 +1,11 @@
 /**
- * @file seed.ts
- * @description Mock data seeding script for local/test DB.
+ * @file database/seed.ts
+ * @author Harry Kakadiya
+ * @date 2026-03-27
  *
- * Uses the same UUIDs as mock.ts so frontend mock data and DB are consistent.
+ * Mock data seeding script for local/test DB.
+ *
+ * Uses the same UUIDs and data as src/mock.ts for consistency.
  *
  * MOCK USER CREDENTIALS (bcrypt, cost 10):
  *   email              | password
@@ -12,40 +15,18 @@
  *   bob@sfsu.edu       | test
  *
  * Usage:
- *   npx ts-node src/seed.ts
+ *   npx ts-node database/seed.ts
  */
 
-import "dotenv/config";
-import pgPromise from "pg-promise";
+import db from "../src/db/connection.js";
+import { GameStatus, UserStatus, CardLocation, Action } from "../src/env.js";
+import type { User, Game, GameUser, GameCard, GameAction, Message } from "../src/models/types.js";
+import { RollbackError } from "../src/util/error.js";
+import logger from "../src/util/logger.js";
 import bcrypt from "bcrypt";
 
 // ---------------------------------------------------------------------------
-// DB — mirrors src/db/index.ts setup
-// ---------------------------------------------------------------------------
-
-const pgp = pgPromise();
-pgp.pg.types.setTypeParser(1700, parseFloat);
-pgp.pg.types.setTypeParser(20, BigInt);
-
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
-
-const db = pgp({ connectionString: DATABASE_URL });
-
-// ---------------------------------------------------------------------------
-// Enums — mirrors src/env.ts
-// ---------------------------------------------------------------------------
-
-const GameStatus = { WAITING: 0, PLAYING: 1, PAUSED: 2, ENDED: 3 };
-const UserStatus = { ACTIVE: 0, INACTIVE: 1, PAUSED: 2 };
-const CardLocation = { DECK: 0, COMMUNITY: 1, HAND: 2 };
-const Action = {
-  DEAL_COMMUNITY: 0, DEAL_HAND: 1, BET: 2, CALL: 3,
-  RAISE: 4, CHECK: 5, FOLD: 6, ALL_IN: 7, SHOWDOWN: 8, PAYOUT: 9,
-};
-
-// ---------------------------------------------------------------------------
-// IDs — same as mock.ts so mock data and DB stay in sync
+// IDs -- same as mock.ts so mock data and DB stay in sync
 // ---------------------------------------------------------------------------
 
 const MOCK_USER_ID  = "00000000-0000-0000-0000-000000000001"; // test@sfsu.edu
@@ -56,135 +37,183 @@ const MOCK_GAME_ID       = "00000000-0000-0000-0000-000000000010"; // PLAYING
 const MOCK_GAME2_ID      = "00000000-0000-0000-0000-000000000011"; // PLAYING
 const MOCK_LOBBY_GAME_ID = "00000000-0000-0000-0000-000000000020"; // WAITING
 
+// Hardcoded to avoid clock skew between DB and JS
+const SEED_DATE = "2026-03-27T00:00:00.000Z";
+
 // ---------------------------------------------------------------------------
 // Seed
 // ---------------------------------------------------------------------------
 
 async function seed() {
-  console.log("Seeding database...\n");
+  logger.info("seeding database...");
 
-  await db.tx(async (t) => {
+  try {
+    await db.tx(async (t) => {
 
-    // ── Truncate (FK-safe order) ───────────────────────────────────────────
-    console.log("Truncating tables...");
-    await t.none(`
-      TRUNCATE messages, game_actions, game_cards, game_users, games, users
-      RESTART IDENTITY CASCADE
-    `);
+      // -- Truncate (FK-safe order) -----------------------------------------
+      logger.info("truncating tables...");
+      await t.none(`
+        TRUNCATE messages, game_actions, game_cards, game_users, games, users
+        RESTART IDENTITY CASCADE
+      `);
 
-    // ── Users ─────────────────────────────────────────────────────────────
-    console.log("Seeding users...");
-    const COST = 10;
-    const hash = await bcrypt.hash("test", COST);
+      // -- Users --------------------------------------------------------------
+      logger.info("seeding users...");
+      const hash = await bcrypt.hash("test", 10);
 
-    await t.none(`
-      INSERT INTO users (id, username, email, password, balance) VALUES
-        ($1, 'test',  'test@sfsu.edu',  $4, 1000),
-        ($2, 'alice', 'alice@sfsu.edu', $4, 500),
-        ($3, 'bob',   'bob@sfsu.edu',   $4, 750)
-    `, [MOCK_USER_ID, MOCK_USER2_ID, MOCK_USER3_ID, hash]);
+      const users: Omit<User, "created_at">[] = [
+        { id: MOCK_USER_ID,  username: "test",  email: "test@sfsu.edu",  password: hash, balance: 1000 },
+        { id: MOCK_USER2_ID, username: "alice", email: "alice@sfsu.edu", password: hash, balance: 500  },
+        { id: MOCK_USER3_ID, username: "bob",   email: "bob@sfsu.edu",   password: hash, balance: 750  },
+      ];
 
-    // ── Games ─────────────────────────────────────────────────────────────
-    console.log("Seeding games...");
-    await t.none(`
-      INSERT INTO games
-        (id, status, pot_amount, max_seats, small_blind, big_blind,
-         last_raise_amount, deck_position, current_player_id)
-      VALUES
-        ($1, $4, 150, 6, 1, 2, 0, 9, $7),
-        ($2, $4, 150, 6, 1, 2, 0, 9, $7),
-        ($3, $5, 0,   6, 1, 2, 0, 0, NULL)
-    `, [
-      MOCK_GAME_ID, MOCK_GAME2_ID, MOCK_LOBBY_GAME_ID,
-      GameStatus.PLAYING, GameStatus.WAITING,
-      GameStatus.ENDED,   // unused but keeps index consistent
-      MOCK_USER_ID,
-    ]);
+      for (const u of users) {
+        const result = await t.oneOrNone(
+          `INSERT INTO users (id, username, email, password, balance, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [u.id, u.username, u.email, u.password, u.balance, SEED_DATE]
+        );
+        if (!result) throw new RollbackError(`failed to insert user: ${u.username}`);
+        logger.debug(`inserted user: ${u.username}`);
+      }
 
-    // ── game_users ────────────────────────────────────────────────────────
-    console.log("Seeding game_users...");
-    await t.none(`
-      INSERT INTO game_users
-        (game_id, user_id, seat_no, balance, status, is_dealer, joined_at)
-      VALUES
-        ($1, $4, 1, 88,  $7, TRUE,  NOW()),
-        ($1, $5, 2, 95,  $7, FALSE, NOW()),
-        ($1, $6, 3, 100, $7, FALSE, NOW())
-    `, [
-      MOCK_GAME_ID,
-      MOCK_GAME2_ID,      // unused placeholder
-      MOCK_LOBBY_GAME_ID, // unused placeholder
-      MOCK_USER_ID, MOCK_USER2_ID, MOCK_USER3_ID,
-      UserStatus.ACTIVE,
-    ]);
+      // -- Games --------------------------------------------------------------
+      logger.info("seeding games...");
+      const games: Omit<Game, "ended_at" | "turn_deadline_at">[] = [
+        {
+          id: MOCK_GAME_ID, status: GameStatus.PLAYING,
+          created_at: new Date(SEED_DATE), updated_at: new Date(SEED_DATE),
+          pot_amount: 150, current_player_id: MOCK_USER_ID,
+          max_seats: 6, small_blind: 1, big_blind: 2,
+          last_raise_amount: 0, deck_position: 9,
+        },
+        {
+          id: MOCK_GAME2_ID, status: GameStatus.PLAYING,
+          created_at: new Date(SEED_DATE), updated_at: new Date(SEED_DATE),
+          pot_amount: 150, current_player_id: MOCK_USER_ID,
+          max_seats: 6, small_blind: 1, big_blind: 2,
+          last_raise_amount: 0, deck_position: 9,
+        },
+        {
+          id: MOCK_LOBBY_GAME_ID, status: GameStatus.WAITING,
+          created_at: new Date(SEED_DATE), updated_at: new Date(SEED_DATE),
+          pot_amount: 0, current_player_id: null,
+          max_seats: 6, small_blind: 1, big_blind: 2,
+          last_raise_amount: 0, deck_position: 0,
+        },
+      ];
 
-    // ── game_cards ────────────────────────────────────────────────────────
-    console.log("Seeding game_cards...");
-    await t.none(`
-      INSERT INTO game_cards (game_id, position, card, location, user_id) VALUES
-        ($1, 6, 12, $2, NULL),
-        ($1, 7, 37, $2, NULL),
-        ($1, 8,  4, $2, NULL),
-        ($1, 0, 25, $3, $4),
-        ($1, 1, 38, $3, $4)
-    `, [
-      MOCK_GAME_ID,
-      CardLocation.COMMUNITY,
-      CardLocation.HAND,
-      MOCK_USER_ID,
-    ]);
+      for (const g of games) {
+        const result = await t.oneOrNone(
+          `INSERT INTO games
+             (id, status, pot_amount, max_seats, small_blind, big_blind,
+              last_raise_amount, deck_position, current_player_id,
+              created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+          [
+            g.id, g.status, g.pot_amount, g.max_seats,
+            g.small_blind, g.big_blind, g.last_raise_amount,
+            g.deck_position, g.current_player_id,
+            SEED_DATE, SEED_DATE,
+          ]
+        );
+        if (!result) throw new RollbackError(`failed to insert game: ${g.id}`);
+        logger.debug(`inserted game: ${g.id}`);
+      }
 
-    // ── game_actions ──────────────────────────────────────────────────────
-    console.log("Seeding game_actions...");
-    await t.none(`
-      INSERT INTO game_actions
-        (game_id, user_id, action, amount, deck_position, created_at)
-      VALUES
-        ($1, $4, $6, NULL, 2, NOW()),
-        ($1, $4, $7, 10,   6, NOW()),
-        ($1, NULL, $8, NULL, 9, NOW())
-    `, [
-      MOCK_GAME_ID,
-      MOCK_GAME2_ID,      // unused placeholder
-      MOCK_LOBBY_GAME_ID, // unused placeholder
-      MOCK_USER_ID,
-      MOCK_USER2_ID,      // unused placeholder
-      Action.DEAL_HAND,
-      Action.BET,
-      Action.DEAL_COMMUNITY,
-    ]);
+      // -- game_users ---------------------------------------------------------
+      logger.info("seeding game_users...");
+      const gameUsers: GameUser[] = [
+        { game_id: MOCK_GAME_ID, user_id: MOCK_USER_ID,  seat_no: 1, balance: 88,  status: UserStatus.ACTIVE, is_dealer: true,  joined_at: new Date(SEED_DATE) },
+        { game_id: MOCK_GAME_ID, user_id: MOCK_USER2_ID, seat_no: 2, balance: 95,  status: UserStatus.ACTIVE, is_dealer: false, joined_at: new Date(SEED_DATE) },
+        { game_id: MOCK_GAME_ID, user_id: MOCK_USER3_ID, seat_no: 3, balance: 100, status: UserStatus.ACTIVE, is_dealer: false, joined_at: new Date(SEED_DATE) },
+      ];
 
-    // ── messages ──────────────────────────────────────────────────────────
-    console.log("Seeding messages...");
+      for (const gu of gameUsers) {
+        const result = await t.oneOrNone(
+          `INSERT INTO game_users
+             (game_id, user_id, seat_no, balance, status, is_dealer, joined_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING user_id`,
+          [gu.game_id, gu.user_id, gu.seat_no, gu.balance, gu.status, gu.is_dealer, gu.joined_at]
+        );
+        if (!result) throw new RollbackError(`failed to insert game_user: ${gu.user_id}`);
+        logger.debug(`inserted game_user: ${gu.user_id}`);
+      }
 
-    // Game chat
-    await t.none(`
-      INSERT INTO messages (user_from, game_id, body, created_at) VALUES
-        ($1, $4, 'gl everyone', NOW()),
-        ($2, $4, 'ty u2',       NOW()),
-        ($3, $4, 'lets go',     NOW())
-    `, [MOCK_USER_ID, MOCK_USER2_ID, MOCK_USER3_ID, MOCK_GAME_ID]);
+      // -- game_cards ---------------------------------------------------------
+      logger.info("seeding game_cards...");
+      const gameCards: GameCard[] = [
+        { game_id: MOCK_GAME_ID, position: 6, card: 12, location: CardLocation.COMMUNITY, user_id: null },
+        { game_id: MOCK_GAME_ID, position: 7, card: 37, location: CardLocation.COMMUNITY, user_id: null },
+        { game_id: MOCK_GAME_ID, position: 8, card:  4, location: CardLocation.COMMUNITY, user_id: null },
+        { game_id: MOCK_GAME_ID, position: 0, card: 25, location: CardLocation.HAND,      user_id: MOCK_USER_ID },
+        { game_id: MOCK_GAME_ID, position: 1, card: 38, location: CardLocation.HAND,      user_id: MOCK_USER_ID },
+      ];
 
-    // DMs
-    await t.none(`
-      INSERT INTO messages (user_from, user_to, body, created_at) VALUES
-        ($1, $2, 'gg last game', NOW()),
-        ($2, $1, 'yeah wp',      NOW())
-    `, [MOCK_USER_ID, MOCK_USER2_ID]);
+      for (const gc of gameCards) {
+        const result = await t.oneOrNone(
+          `INSERT INTO game_cards (game_id, position, card, location, user_id)
+           VALUES ($1,$2,$3,$4,$5) RETURNING position`,
+          [gc.game_id, gc.position, gc.card, gc.location, gc.user_id]
+        );
+        if (!result) throw new RollbackError(`failed to insert game_card at position: ${gc.position}`);
+        logger.debug(`inserted game_card at position: ${gc.position}`);
+      }
 
-  });
+      // -- game_actions -------------------------------------------------------
+      logger.info("seeding game_actions...");
+      const gameActions: Omit<GameAction, "id">[] = [
+        { game_id: MOCK_GAME_ID, user_id: MOCK_USER_ID, action: Action.DEAL_HAND,      amount: null, deck_position: 2, created_at: new Date(SEED_DATE) },
+        { game_id: MOCK_GAME_ID, user_id: MOCK_USER_ID, action: Action.BET,            amount: 10,   deck_position: 6, created_at: new Date(SEED_DATE) },
+        { game_id: MOCK_GAME_ID, user_id: null,          action: Action.DEAL_COMMUNITY, amount: null, deck_position: 9, created_at: new Date(SEED_DATE) },
+      ];
 
-  console.log("\n✅ Seed complete");
-  console.log("   Users:   test, alice, bob  (password: test)");
-  console.log("   Games:   2x PLAYING, 1x WAITING");
-  console.log("   Cards:   3 community + 2 hand cards in MOCK_GAME");
-  console.log("   Actions: DEAL_HAND, BET, DEAL_COMMUNITY");
-  console.log("   Messages: 3 game chat + 2 DMs");
+      for (const ga of gameActions) {
+        const result = await t.oneOrNone(
+          `INSERT INTO game_actions
+             (game_id, user_id, action, amount, deck_position, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+          [ga.game_id, ga.user_id, ga.action, ga.amount, ga.deck_position, ga.created_at]
+        );
+        if (!result) throw new RollbackError(`failed to insert game_action: ${ga.action}`);
+        logger.debug(`inserted game_action: ${ga.action}`);
+      }
 
-  await db.$pool.end();
+      // -- messages -----------------------------------------------------------
+      logger.info("seeding messages...");
+      const messages: Omit<Message, "id" | "username">[] = [
+        { user_from: MOCK_USER_ID,  game_id: MOCK_GAME_ID, user_to: null,          body: "gl everyone",  created_at: new Date(SEED_DATE) },
+        { user_from: MOCK_USER2_ID, game_id: MOCK_GAME_ID, user_to: null,          body: "ty u2",        created_at: new Date(SEED_DATE) },
+        { user_from: MOCK_USER3_ID, game_id: MOCK_GAME_ID, user_to: null,          body: "lets go",      created_at: new Date(SEED_DATE) },
+        { user_from: MOCK_USER_ID,  game_id: null,          user_to: MOCK_USER2_ID, body: "gg last game", created_at: new Date(SEED_DATE) },
+        { user_from: MOCK_USER2_ID, game_id: null,          user_to: MOCK_USER_ID,  body: "yeah wp",      created_at: new Date(SEED_DATE) },
+      ];
+
+      for (const m of messages) {
+        const result = await t.oneOrNone(
+          `INSERT INTO messages (user_from, game_id, user_to, body, created_at)
+           VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+          [m.user_from, m.game_id, m.user_to, m.body, m.created_at]
+        );
+        if (!result) throw new RollbackError(`failed to insert message: ${m.body}`);
+        logger.debug(`inserted message: ${m.body}`);
+      }
+
+    });
+
+    logger.info("seed complete");
+    logger.info("  users:   test, alice, bob  (password: test)");
+    logger.info("  games:   2x PLAYING, 1x WAITING");
+    logger.info("  cards:   3 community + 2 hand cards in MOCK_GAME");
+    logger.info("  actions: DEAL_HAND, BET, DEAL_COMMUNITY");
+    logger.info("  messages: 3 game chat + 2 DMs");
+
+  } catch (err) {
+    logger.error("seed failed, transaction rolled back:", err);
+    process.exit(1);
+  } finally {
+    db.$pool.end();
+  }
 }
 
-seed().catch((err) => {
-  console.error("❌ Seed failed:", err);
-  process.exit(1);
-});
+seed();
