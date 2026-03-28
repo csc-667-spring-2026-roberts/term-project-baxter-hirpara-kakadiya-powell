@@ -28,42 +28,118 @@ import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
  */
 class GameRepository implements IRepository<Game> {
   /** find a game by ID */
-  async findById(_id: string): Promise<Game | null> {
-    return MOCK_GAME;
+  async findById(id: string): Promise<Game | null> {
+    try {
+      const game = await db.oneOrNone(
+        "SELECT * FROM games WHERE id = $1",
+        [id]
+      );
+      return game;
+    } catch (err) {
+      logger.error("findById error:", err);
+      return null;
+    }
   }
 
   /** create a new game */
-  async create(_data: Partial<Game>): Promise<Game | null> {
-    return MOCK_GAME;
+  async create(data: Partial<Game>): Promise<Game | null> {
+    try {
+      const game = await db.one(
+        `INSERT INTO games (status, small_blind, big_blind)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [data.status, data.small_blind, data.big_blind]
+      );
+      return game;
+    } catch (err) {
+      logger.error("create error:", err);
+      return null;
+    }
   }
 
   /** update a game by ID */
-  async update(_id: string, _data: Partial<Game>): Promise<boolean> {
-    return false;
+  async update(id: string, data: Partial<Game>): Promise<boolean> {
+    try {
+      const res = await db.result(
+        "UPDATE games SET status = $1 WHERE id = $2",
+        [data.status, id]
+      );
+      return res.rowCount > 0;
+    } catch (err) {
+      logger.error("update error:", err);
+      return false;
+    }
   }
 
   /** delete a game by ID */
-  async delete(_id: string): Promise<boolean> {
-    return false;
+  async delete(id: string): Promise<boolean> {
+    try {
+      const res = await db.result(
+        "DELETE FROM games WHERE id = $1",
+        [id]
+      );
+      return res.rowCount > 0;
+    } catch (err) {
+      logger.error("delete error:", err);
+      return false;
+    }
   }
 
-  async findByUserId(_userId: string): Promise<Game[] | null> {
-    return MOCK_GAMES;
+  async findByUserId(userId: string): Promise<Game[] | null> {
+    try {
+      const games = await db.any(
+        `SELECT *
+         FROM games
+         WHERE id IN (
+           SELECT game_id FROM game_users WHERE user_id = $1
+         )`,
+        [userId]
+      );
+      return games.length ? games : null;
+    } catch (err) {
+      logger.error("findByUserId error:", err);
+      return null;
+    }
   }
 
   /**
    * Find available games matching blind levels, sorted on index
    * IDX_games_status_created_at.
    */
-  async findAvailableBlind(_smallBlind: number, _bigBlind: number): Promise<Game[] | null> {
-    return MOCK_GAMES;
+  async findAvailableBlind(smallBlind: number, bigBlind: number): Promise<Game[] | null> {
+    try {
+      const games = await db.any(
+        `SELECT *
+         FROM games
+         WHERE status = 'waiting'
+           AND small_blind = $1
+           AND big_blind = $2
+         ORDER BY created_at ASC`,
+        [smallBlind, bigBlind]
+      );
+      return games.length ? games : null;
+    } catch (err) {
+      logger.error("findAvailableBlind error:", err);
+      return null;
+    }
   }
 
   /**
    * Find all available games, sorted on index IDX_games_status_created_at.
    */
   async findAvailableAll(): Promise<Game[] | null> {
-    return MOCK_GAMES;
+    try {
+      const games = await db.any(
+        `SELECT *
+         FROM games
+         WHERE status = 'waiting'
+         ORDER BY created_at ASC`
+      );
+      return games.length ? games : null;
+    } catch (err) {
+      logger.error("findAvailableAll error:", err);
+      return null;
+    }
   }
 
   /** add a player to a game, deduct buy-in from user balance */

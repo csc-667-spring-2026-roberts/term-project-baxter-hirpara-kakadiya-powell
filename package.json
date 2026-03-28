@@ -34,7 +34,7 @@
     "@types/express-ejs-layouts": "^2.5.4",
     "@types/express-session": "^1.18.2",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.37",
     "eslint": "^9.39.4",
     "husky": "^9.0.0",
     "js-beautify": "^1.15.4",
