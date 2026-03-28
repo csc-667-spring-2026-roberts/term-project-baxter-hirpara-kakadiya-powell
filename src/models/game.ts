@@ -2,15 +2,16 @@
 // stub file, disable linting
 /**
  * @file models/game.ts
- * @author Tyler Baxter
+ * @author Tyler Baxter, Kat Powell
  * @date 2026-03-16
+ * @modified 2026-03-27
  *
  * Game model and repository.
  */
 
 import db, { pgp } from "../db/connection.js";
 import logger from "../util/logger.js";
-import { validatePosition } from "../util/util.js";
+import { validatePosition, restoreBalance } from "../util/util.js";
 import { RollbackError } from "../util/error.js";
 import { DECK_SIZE, GameStatus, UserStatus, Action, CardLocation } from "../env.js";
 import {
@@ -67,42 +68,243 @@ class GameRepository implements IRepository<Game> {
   }
 
   /** add a player to a game, deduct buy-in from user balance */
-  async addUser(
-    _gameId: string,
-    _userId: string,
-    _seatNo: number,
-    _buyIn: number,
-  ): Promise<boolean> {
-    return false;
+  async addUser(gameId: string, userId: string, seatNo: number, buyIn: number): Promise<boolean> {
+    if (!gameId || !userId || seatNo < 0 || buyIn <= 0) {
+      logger.warn("invalid parameters for addUser");
+      return false;
+    }
+
+    try {
+      return await db.tx(async (t) => {
+        const game = await t.oneOrNone("SELECT id FROM games WHERE id = $1 AND status = $2", [
+          gameId,
+          GameStatus.WAITING,
+        ]);
+        if (!game) {
+          logger.warn(`game (${gameId}) not found or not in WAITING status`);
+          throw new RollbackError();
+        }
+
+        const existing = await t.oneOrNone(
+          "SELECT user_id FROM game_users WHERE game_id = $1 AND user_id = $2",
+          [gameId, userId],
+        );
+        if (existing) {
+          logger.warn(`user (${userId}) already in game (${gameId})`);
+          throw new RollbackError();
+        }
+
+        const seatTaken = await t.oneOrNone(
+          "SELECT seat_no FROM game_users WHERE game_id = $1 AND seat_no = $2",
+          [gameId, seatNo],
+        );
+        if (seatTaken) {
+          logger.warn(`seat (${String(seatNo)}) already taken in game (${gameId})`);
+          throw new RollbackError();
+        }
+
+        const user = await t.oneOrNone<{ balance: number }>(
+          "SELECT balance FROM users WHERE id = $1",
+          [userId],
+        );
+        if (!user || user.balance < buyIn) {
+          logger.warn(`user (${userId}) not found or insufficient balance for buy-in`);
+          throw new RollbackError();
+        }
+
+        const deduct = await t.result("UPDATE users SET balance = balance - $1 WHERE id = $2", [
+          buyIn,
+          userId,
+        ]);
+        if (deduct.rowCount <= 0) {
+          logger.warn(`failed to deduct buy-in from user (${userId})`);
+          throw new RollbackError();
+        }
+
+        const insert = await t.result(
+          "INSERT INTO game_users (game_id, user_id, seat_no, balance, status, is_dealer, joined_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())",
+          [gameId, userId, seatNo, buyIn, UserStatus.ACTIVE, false],
+        );
+        if (insert.rowCount <= 0) {
+          logger.warn(`failed to insert game_user for user (${userId}) in game (${gameId})`);
+          throw new RollbackError();
+        }
+
+        return true;
+      });
+    } catch (err) {
+      if (err instanceof RollbackError) {
+        logger.warn(`DB rollback for addUser: game_id (${gameId}), user_id (${userId})`);
+        return false;
+      }
+      logger.error(String(err));
+      throw err;
+    }
   }
 
-  async removeUser(_gameId: string, _userId: string): Promise<boolean> {
-    return false;
+  async removeUser(gameId: string, userId: string): Promise<boolean> {
+    if (!gameId || !userId) {
+      logger.warn("invalid parameters for removeUser");
+      return false;
+    }
+
+    try {
+      return await db.tx(async (t) => {
+        const gameUser = await t.oneOrNone<{ balance: number }>(
+          "SELECT balance FROM game_users WHERE game_id = $1 AND user_id = $2",
+          [gameId, userId],
+        );
+        if (!gameUser) {
+          logger.warn(`game_user not found for game (${gameId}), user (${userId})`);
+          throw new RollbackError();
+        }
+
+        if (!restoreBalance(userId, gameUser.balance)) {
+          logger.warn(`restoreBalance failed for user (${userId})`);
+          throw new RollbackError();
+        }
+
+        const del = await t.result("DELETE FROM game_users WHERE game_id = $1 AND user_id = $2", [
+          gameId,
+          userId,
+        ]);
+        if (del.rowCount <= 0) {
+          logger.warn(`failed to delete game_user for game (${gameId}), user (${userId})`);
+          throw new RollbackError();
+        }
+
+        // don't touch game_cards here — the user's dealt cards become dead
+        // cards for the rest of the hand. upsertCards resets all 52 positions
+        // on the next shuffle/deal.
+        return true;
+      });
+    } catch (err) {
+      if (err instanceof RollbackError) {
+        logger.warn(`DB rollback for removeUser: game_id (${gameId}), user_id (${userId})`);
+        return false;
+      }
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** get all players in a game */
-  async getUsers(_gameId: string): Promise<GameUser[] | null> {
-    return MOCK_GAME_USERS;
+  async getUsers(gameId: string): Promise<GameUser[] | null> {
+    if (!gameId) {
+      logger.warn(`invalid game_id: ${gameId}`);
+      return null;
+    }
+
+    try {
+      return await db.manyOrNone<GameUser>(
+        "SELECT gu.*, u.username FROM game_users gu JOIN users u ON gu.user_id = u.id WHERE gu.game_id = $1 ORDER BY gu.seat_no",
+        [gameId],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** get a specific player in a game */
-  async getUser(_gameId: string, _userId: string): Promise<GameUser | null> {
-    return MOCK_GAME_USERS[0] ?? null;
+  async getUser(gameId: string, userId: string): Promise<GameUser | null> {
+    if (!gameId || !userId) {
+      logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
+      return null;
+    }
+
+    try {
+      return await db.oneOrNone<GameUser>(
+        "SELECT gu.*, u.username FROM game_users gu JOIN users u ON gu.user_id = u.id WHERE gu.game_id = $1 AND gu.user_id = $2",
+        [gameId, userId],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** update a User's balance (after bet/payout) */
-  async updateUserBalance(_gameId: string, _userId: string, _amount: number): Promise<boolean> {
-    return false;
+  async updateUserBalance(gameId: string, userId: string, amount: number): Promise<boolean> {
+    if (!gameId || !userId) {
+      logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
+      return false;
+    }
+
+    try {
+      const result = await db.result(
+        "UPDATE game_users SET balance = balance + $1 WHERE game_id = $2 AND user_id = $3",
+        [amount, gameId, userId],
+      );
+
+      if (result.rowCount <= 0) {
+        logger.warn(`updateUserBalance failed for game (${gameId}), user (${userId})`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** update a user's status */
-  async updateUserStatus(_gameId: string, _userId: string, _status: UserStatus): Promise<boolean> {
-    return false;
+  async updateUserStatus(gameId: string, userId: string, status: UserStatus): Promise<boolean> {
+    if (!gameId || !userId) {
+      logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
+      return false;
+    }
+
+    try {
+      const result = await db.result(
+        "UPDATE game_users SET status = $1 WHERE game_id = $2 AND user_id = $3",
+        [status, gameId, userId],
+      );
+
+      if (result.rowCount <= 0) {
+        logger.warn(`updateUserStatus failed for game (${gameId}), user (${userId})`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** update the dealer for a game */
-  async updateDealer(_gameId: string, _userId: string): Promise<boolean> {
-    return false;
+  async updateDealer(gameId: string, userId: string): Promise<boolean> {
+    if (!gameId || !userId) {
+      logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
+      return false;
+    }
+
+    try {
+      return await db.tx(async (t) => {
+        await t.result("UPDATE game_users SET is_dealer = FALSE WHERE game_id = $1", [gameId]);
+
+        const res = await t.result(
+          "UPDATE game_users SET is_dealer = TRUE WHERE game_id = $1 AND user_id = $2",
+          [gameId, userId],
+        );
+
+        if (res.rowCount <= 0) {
+          logger.warn(`user (${userId}) not found in game (${gameId}) for updateDealer`);
+          throw new RollbackError();
+        }
+
+        return true;
+      });
+    } catch (err) {
+      if (err instanceof RollbackError) {
+        logger.warn(`DB rollback for updateDealer: game_id (${gameId}), user_id (${userId})`);
+        return false;
+      }
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /**
@@ -214,18 +416,62 @@ class GameRepository implements IRepository<Game> {
   }
 
   /** get a user's hand */
-  async getHand(_gameId: string, _userId: string): Promise<GameCard[]> {
-    return MOCK_GAME_CARDS.filter((c: GameCard) => c.location === CardLocation.HAND);
+  async getHand(gameId: string, userId: string): Promise<GameCard[]> {
+    if (!gameId) {
+      logger.warn(`invalid game_id: ${gameId}`);
+      return [];
+    }
+
+    if (!userId) {
+      logger.warn(`invalid user_id: ${userId}`);
+      return [];
+    }
+
+    try {
+      return await db.manyOrNone<GameCard>(
+        "SELECT * FROM game_cards WHERE game_id = $1 AND user_id = $2 AND location = $3",
+        [gameId, userId, CardLocation.HAND],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** get community cards (flop, turn, river) */
-  async getCommunityCards(_gameId: string): Promise<GameCard[]> {
-    return MOCK_GAME_CARDS.filter((c: GameCard) => c.location === CardLocation.COMMUNITY);
+  async getCommunityCards(gameId: string): Promise<GameCard[]> {
+    if (!gameId) {
+      logger.warn(`invalid game_id: ${gameId}`);
+      return [];
+    }
+
+    try {
+      return await db.manyOrNone<GameCard>(
+        "SELECT * FROM game_cards WHERE game_id = $1 AND location = $2",
+        [gameId, CardLocation.COMMUNITY],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /** get all cards for a game */
-  async getAllCards(_gameId: string): Promise<GameCard[]> {
-    return [];
+  async getAllCards(gameId: string): Promise<GameCard[]> {
+    if (!gameId) {
+      logger.warn(`invalid game_id: ${gameId}`);
+      return [];
+    }
+
+    try {
+      return await db.manyOrNone<GameCard>(
+        "SELECT * FROM game_cards WHERE game_id = $1 ORDER BY position",
+        [gameId],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
 
   /**
