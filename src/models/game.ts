@@ -67,7 +67,16 @@ class GameRepository implements IRepository<Game> {
     return MOCK_GAMES;
   }
 
-  /** add a player to a game, deduct buy-in from user balance */
+  /**
+   * Add a player to a game, deduct buy-in from user balance. DB rollback on
+   * operation failure.
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @param seatNo - The seat number to assign
+   * @param buyIn - The buy-in amount to deduct from user balance
+   * @returns TRUE for SUCCESS, FALSE for FAILURE
+   */
   async addUser(gameId: string, userId: string, seatNo: number, buyIn: number): Promise<boolean> {
     if (!gameId || !userId || seatNo < 0 || buyIn <= 0) {
       logger.warn("invalid parameters for addUser");
@@ -142,6 +151,14 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
+  /**
+   * Remove a player from a game, restore balance via restoreBalance. DB
+   * rollback on operation failure.
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @returns TRUE for SUCCESS, FALSE for FAILURE
+   */
   async removeUser(gameId: string, userId: string): Promise<boolean> {
     if (!gameId || !userId) {
       logger.warn("invalid parameters for removeUser");
@@ -188,7 +205,12 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** get all players in a game */
+  /**
+   * Get all players in a game, joined with username.
+   *
+   * @param gameId - The game's ID
+   * @returns Array of GameUser objects, or null on invalid input
+   */
   async getUsers(gameId: string): Promise<GameUser[] | null> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
@@ -206,7 +228,13 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** get a specific player in a game */
+  /**
+   * Get a specific player in a game, joined with username.
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @returns The GameUser object, or null if not found
+   */
   async getUser(gameId: string, userId: string): Promise<GameUser | null> {
     if (!gameId || !userId) {
       logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
@@ -224,7 +252,14 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** update a User's balance (after bet/payout) */
+  /**
+   * Update a user's in-game balance with a delta (after bet/payout).
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @param amount - The delta to apply to the balance
+   * @returns TRUE for SUCCESS, FALSE for FAILURE
+   */
   async updateUserBalance(gameId: string, userId: string, amount: number): Promise<boolean> {
     if (!gameId || !userId) {
       logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
@@ -249,7 +284,14 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** update a user's status */
+  /**
+   * Update a user's status within a game.
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @param status - The new UserStatus
+   * @returns TRUE for SUCCESS, FALSE for FAILURE
+   */
   async updateUserStatus(gameId: string, userId: string, status: UserStatus): Promise<boolean> {
     if (!gameId || !userId) {
       logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
@@ -274,7 +316,14 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** update the dealer for a game */
+  /**
+   * Update the dealer for a game. Unsets all current dealers, then sets the
+   * specified user as dealer. DB rollback on operation failure.
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID to set as dealer
+   * @returns TRUE for SUCCESS, FALSE for FAILURE
+   */
   async updateDealer(gameId: string, userId: string): Promise<boolean> {
     if (!gameId || !userId) {
       logger.warn(`invalid game_id: ${gameId} or user_id: ${userId}`);
@@ -415,7 +464,13 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** get a user's hand */
+  /**
+   * Get a user's hand (hole cards).
+   *
+   * @param gameId - The game's ID
+   * @param userId - The user's ID
+   * @returns Array of GameCard objects for the user's hand
+   */
   async getHand(gameId: string, userId: string): Promise<GameCard[]> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
@@ -438,7 +493,12 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** get community cards (flop, turn, river) */
+  /**
+   * Get community cards (flop, turn, river).
+   *
+   * @param gameId - The game's ID
+   * @returns Array of GameCard objects on the community board
+   */
   async getCommunityCards(gameId: string): Promise<GameCard[]> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
@@ -456,7 +516,12 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** get all cards for a game */
+  /**
+   * Get all cards for a game, ordered by deck position.
+   *
+   * @param gameId - The game's ID
+   * @returns Array of all GameCard objects in the game
+   */
   async getAllCards(gameId: string): Promise<GameCard[]> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
