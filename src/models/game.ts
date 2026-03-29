@@ -469,17 +469,18 @@ class GameRepository implements IRepository<Game> {
    *
    * @param gameId - The game's ID
    * @param userId - The user's ID
-   * @returns Array of GameCard objects for the user's hand
+   * @returns Array of GameCard objects for the user's hand,
+   * or null on invalid input
    */
-  async getHand(gameId: string, userId: string): Promise<GameCard[]> {
+  async getHand(gameId: string, userId: string): Promise<GameCard[] | null> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
-      return [];
+      return null;
     }
 
     if (!userId) {
       logger.warn(`invalid user_id: ${userId}`);
-      return [];
+      return null;
     }
 
     try {
@@ -497,12 +498,13 @@ class GameRepository implements IRepository<Game> {
    * Get community cards (flop, turn, river).
    *
    * @param gameId - The game's ID
-   * @returns Array of GameCard objects on the community board
+   * @returns Array of GameCard objects on the community board,
+   * or null on invalid input
    */
-  async getCommunityCards(gameId: string): Promise<GameCard[]> {
+  async getCommunityCards(gameId: string): Promise<GameCard[] | null> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
-      return [];
+      return null;
     }
 
     try {
@@ -520,12 +522,13 @@ class GameRepository implements IRepository<Game> {
    * Get all cards for a game, ordered by deck position.
    *
    * @param gameId - The game's ID
-   * @returns Array of all GameCard objects in the game
+   * @returns Array of all GameCard objects in the game,
+   * or null on invalid input
    */
-  async getAllCards(gameId: string): Promise<GameCard[]> {
+  async getAllCards(gameId: string): Promise<GameCard[] | null> {
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
-      return [];
+      return null;
     }
 
     try {
