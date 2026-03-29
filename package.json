@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "clean": "rm -rf dist/",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed": "tsx database/seed.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
