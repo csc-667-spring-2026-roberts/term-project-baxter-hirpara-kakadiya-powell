@@ -12,7 +12,6 @@ import seedData from "../database/seed.json" assert { type: "json" };
 // ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------
-// login: email: test@sfsu.edu, password: test
 
 function requireUser(index: number): User {
   const u = seedData.users[index];
@@ -55,6 +54,7 @@ export const MOCK_LOBBY: Game[] = [MOCK_LOBBY_GAME];
 
 export const MOCK_GAME_USERS: GameUser[] = seedData.game_users.map((gu) => ({
   ...gu,
+  username: MOCK_USERS.find((u) => u.id === gu.user_id)?.username ?? "",
   joined_at: gu.joined_at ? new Date(gu.joined_at) : null,
 }));
 
