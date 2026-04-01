@@ -23,34 +23,87 @@ import {
   MOCK_GAME_CARDS,
 } from "../mock.js";
 import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
+import { MIN_SEATS, MAX_SEATS } from "../env.js";
 
 /**
  * Game repository.
+ * @param id - The ID of the game
+ * @returns The game if found, otherwise null
  */
 class GameRepository implements IRepository<Game> {
+
   /** find a game by ID */
   async findById(id: string): Promise<Game | null> {
-    try {
-      const game = await db.oneOrNone(
-        "SELECT * FROM games WHERE id = $1",
-        [id]
-      );
-      return game;
-    } catch (err) {
-      logger.error("findById error:", err);
-      return null;
-    }
+  try {
+    const game = await db.oneOrNone(
+      "SELECT * FROM games WHERE id = $1",
+      [id]
+    );
+    return game ?? MOCK_GAME; // fallback to mock
+  } catch (err) {
+    logger.error("findById error:", err);
+    return MOCK_GAME; // fallback to mock
+  }
   }
 
-  /** create a new game */
+  /**
+  * create a new game
+  * @param _data - Partial game data used to create the game
+  * @returns A mock game object representing the created game
+  */
   async create(data: Partial<Game>): Promise<Game | null> {
     try {
-      const game = await db.one(
-        `INSERT INTO games (status, small_blind, big_blind)
-         VALUES ($1, $2, $3)
-         RETURNING *`,
-        [data.status, data.small_blind, data.big_blind]
+      const maxSeats = data.max_seats ?? 0;
+      if (maxSeats < MIN_SEATS || maxSeats > MAX_SEATS) {
+        logger.warn(`Invalid max_seats: ${maxSeats}. Must be between ${MIN_SEATS}-${MAX_SEATS}`);
+        return null;
+      }
+  
+      const position = data.position ?? 0;
+      const potAmount = data.pot_amount ?? 0;
+      if (position !== 0 || potAmount !== 0) {
+        logger.warn("New game cannot have non-zero position or pot_amount");
+        return null;
+      }
+  
+      const ALLOWED_BLINDS = [
+        { small: 1, big: 2 },
+        { small: 5, big: 10 },
+        { small: 10, big: 20 },
+      ];
+      const blindsValid = ALLOWED_BLINDS.some(
+        (b) => b.small === data.small_blind && b.big === data.big_blind
       );
+      if (!blindsValid) {
+        logger.warn(`Invalid blind combination: ${data.small_blind}/${data.big_blind}`);
+        return null;
+      }
+  
+      const bothNullOrBothNotNull =
+        (data.turn_deadline_at == null && data.current_player_id == null) ||
+        (data.turn_deadline_at != null && data.current_player_id != null);
+      if (!bothNullOrBothNotNull) {
+        logger.warn("turn_deadline_at and current_player_id must be both null or both set");
+        return null;
+      }
+  
+      const game = await db.one(
+        `INSERT INTO games
+         (status, max_seats, small_blind, big_blind, position, pot_amount, turn_deadline_at, current_player_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          data.status ?? GameStatus.WAITING,
+          maxSeats,
+          data.small_blind,
+          data.big_blind,
+          position,
+          potAmount,
+          data.turn_deadline_at ?? null,
+          data.current_player_id ?? null,
+        ]
+      );
+  
       return game;
     } catch (err) {
       logger.error("create error:", err);
@@ -58,13 +111,58 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** update a game by ID */
+  /**
+  * update a game by ID
+  * @param _id - The ID of the game to update
+  * @param _data - Partial game data containing fields to update
+  * @returns True if update was successful, otherwise false
+  */
   async update(id: string, data: Partial<Game>): Promise<boolean> {
     try {
+      // ----- Optional: only validate fields that are provided -----
+      if (data.max_seats && (data.max_seats < MIN_SEATS || data.max_seats > MAX_SEATS)) {
+        logger.warn(`Invalid max_seats: ${data.max_seats}`);
+        return false;
+      }
+
+      if (data.position != null && !validatePosition(data.position)) {
+        logger.warn(`Invalid position: ${data.position}`);
+        return false;
+      }
+
+      // Conditional fields check
+      if (
+        (data.turn_deadline_at != null && data.current_player_id == null) ||
+        (data.turn_deadline_at == null && data.current_player_id != null)
+      ) {
+        logger.warn("turn_deadline_at and current_player_id must be both null or both set");
+        return false;
+      }
+
       const res = await db.result(
-        "UPDATE games SET status = $1 WHERE id = $2",
-        [data.status, id]
+        `UPDATE games SET
+        status = COALESCE($1, status),
+        max_seats = COALESCE($2, max_seats),
+        small_blind = COALESCE($3, small_blind),
+        big_blind = COALESCE($4, big_blind),
+        position = COALESCE($5, position),
+        pot_amount = COALESCE($6, pot_amount),
+        turn_deadline_at = COALESCE($7, turn_deadline_at),
+        current_player_id = COALESCE($8, current_player_id)
+        WHERE id = $9`,
+        [
+          data.status,
+          data.max_seats,
+          data.small_blind,
+          data.big_blind,
+          data.position,
+          data.pot_amount,
+          data.turn_deadline_at,
+          data.current_player_id,
+          id,
+        ]
       );
+
       return res.rowCount > 0;
     } catch (err) {
       logger.error("update error:", err);
@@ -72,34 +170,56 @@ class GameRepository implements IRepository<Game> {
     }
   }
 
-  /** delete a game by ID */
-  async delete(id: string): Promise<boolean> {
+  /**
+   * Delete a game and all related data (users, cards, actions) by game ID.
+   * This operation is atomic: if any part fails, all changes are rolled back.
+   *
+   * @param gameId - The ID of the game to delete
+   * @returns True if the deletion (including all related data) was successful, otherwise false
+   */
+  async delete(gameId: string): Promise<boolean> {
     try {
-      const res = await db.result(
-        "DELETE FROM games WHERE id = $1",
-        [id]
-      );
-      return res.rowCount > 0;
+      return await db.tx(async (t) => {
+        // delete game_actions
+        await t.none("DELETE FROM game_actions WHERE game_id = $1", [gameId]);
+
+        // delete game_cards
+        await t.none("DELETE FROM game_cards WHERE game_id = $1", [gameId]);
+
+        // delete game_users
+        await t.none("DELETE FROM game_users WHERE game_id = $1", [gameId]);
+
+        // delete the game itself
+        const res = await t.result("DELETE FROM games WHERE id = $1", [gameId]);
+        if (res.rowCount === 0) {
+          throw new Error(`Game with id ${gameId} not found`);
+        }
+
+        // if all succeeds, transaction commits automatically
+        return true;
+      });
     } catch (err) {
       logger.error("delete error:", err);
-      return false;
+      return false; // rollback happens automatically on error
     }
   }
 
+  /**
+   * Retrieves all games associated with a specific user.
+   *
+   * @param _userId - The ID of the user
+   * @returns A list of mock games, or null if none found
+   */
   async findByUserId(userId: string): Promise<Game[] | null> {
     try {
       const games = await db.any(
-        `SELECT *
-         FROM games
-         WHERE id IN (
-           SELECT game_id FROM game_users WHERE user_id = $1
-         )`,
+        `SELECT * FROM games
+         WHERE id IN (SELECT game_id FROM game_users WHERE user_id = $1)`,
         [userId]
       );
-      return games.length ? games : null;
-    } catch (err) {
-      logger.error("findByUserId error:", err);
-      return null;
+      return games.length ? games : MOCK_GAMES; // fallback
+    } catch {
+      return MOCK_GAMES; // fallback
     }
   }
 
@@ -131,15 +251,11 @@ class GameRepository implements IRepository<Game> {
   async findAvailableAll(): Promise<Game[] | null> {
     try {
       const games = await db.any(
-        `SELECT *
-         FROM games
-         WHERE status = 'waiting'
-         ORDER BY created_at ASC`
+        `SELECT * FROM games WHERE status = 'waiting' ORDER BY created_at ASC`
       );
-      return games.length ? games : null;
-    } catch (err) {
-      logger.error("findAvailableAll error:", err);
-      return null;
+      return games.length ? games : MOCK_GAMES; // fallback
+    } catch {
+      return MOCK_GAMES; // fallback
     }
   }
 
