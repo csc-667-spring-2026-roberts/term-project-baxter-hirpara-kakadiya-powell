@@ -1,0 +1,12 @@
+<%# login.ejs - Game page %>
+<%- contentFor('body') %>
+<div class="container">
+	<h1><%= locals.title %></h1>
+	<% if (locals.player) { %>
+	<p>PLAYER</p>
+	<% } else { %>
+	<p>SPECTATOR</p>
+	<% } %>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

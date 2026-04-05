@@ -1,0 +1,25 @@
+<%# partials/game/action-bar.ejs - Player actions %>
+<div id="action-bar" class="game-bar">
+	<% if (player && hand) { %>
+	<button id="fold-button" class="game-button" data-action="6">Fold</button>
+	<button id="check-button" class="game-button" data-action="5">Check</button>
+	<div id="call-group" class="game-button-group">
+		<button id="call-button" class="game-button" data-action="3">Call <span id="money"></span></button>
+		<div class="game-input-wrapper">
+			<span class="game-input"><%= game.last_raise_amount %></span>
+		</div>
+	</div>
+	<div id="raise-group" class="game-button-group">
+		<button id="raise-button" class="game-button" data-action="4">Raise</button>
+		<div class="game-input-wrapper">
+			<input type="number" id="raise-input" class="game-input" min="<%=game.last_raise_amount %>" max="<%= player.balance %>" placeholder="<%= game.last_raise_amount %>">
+		</div>
+	</div>
+	<button id="allin-button" class="game-button" data-action="7">All In</button>
+	<% } else { %>
+	<!-- xxx do something better for spectator mode -->
+	<p>SPECTATOR</p>
+	<% } %>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

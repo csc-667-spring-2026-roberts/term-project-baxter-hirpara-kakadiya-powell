@@ -1,0 +1,38 @@
+<%# game.ejs - Game page %>
+<%- contentFor('body') %>
+<div id="game-container" data-game-id="<%= game.id %>" data-user-id="<%= locals.user ? locals.user.id : '' %>">
+	<div id="game-top-bar" class="game-bar">
+		<!-- PRE: assumes game structure is validated, no fallbacks! -->
+		<span>Small Blind: <span id="small_blind" class="money">$<%= game.small_blind %></span></span>
+		<span>Big Blind: <span id="big_blind" class="money">$<%= game.big_blind %></span></span>
+		<span>Pot: <span id="pot_amount" class="money">$<%= game.pot_amount %></span></span>
+		<button class="game-button lobby-redirect" onclick="location.href='/'">Lobby</button>
+	</div>
+
+	<div id="game-area">
+		<div id="table">
+
+			<div id="felt">
+				<div id="community-cards">
+					<% communityCards.forEach((gc, idx) => { %>
+					<div class="card-slot" id="community-card-<%= idx %>" data-card="<%= gc.card %>"></div>
+					<% }); %>
+				</div>
+			</div>
+
+			<!-- seats come after in dom, to paint "on top" of felt -->
+			<% for (let i = 1; i <= (game.max_seats || 6); i++) { %>
+			<%- include('partials/game/seat', { seatNo: i }) %>
+			<% } %>
+
+		</div>
+	</div>
+
+	<!-- player hand conditionally renders on whether this player is in this game -->
+	<%- include('partials/game/player-hand') %>
+
+	<!-- action bar displays live player mode, or spectator mode -->
+	<%- include('partials/game/action-bar') %>
+</div>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

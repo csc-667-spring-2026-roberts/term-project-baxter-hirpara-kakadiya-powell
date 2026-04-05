@@ -1,0 +1,43 @@
+<%# layouts/game.ejs - Full-viewport game layout %>
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+	<%- include('../partials/head') %>
+</head>
+
+<body class="game-body">
+	<!-- header -->
+	<%- include('../partials/header.ejs') %>
+
+	<!-- flash message banner -->
+	<% if (locals.messages && locals.messages.error) {%>
+	<div class="flash error">
+		<%= locals.messages.error %>
+	</div>
+	<% } %>
+	<% if (locals.messages && locals.messages.success) {%>
+	<div class="flash success">
+		<%= locals.messages.success %>
+	</div>
+	<% } %>
+	<% if (locals.cmd) {%>
+	<div class="flash info">
+		<%= locals.cmd %>
+	</div>
+	<% } %>
+
+	<!-- full-viewport for game -->
+	<main class='game-viewport'><%- body %></main>
+
+	<!-- chat (if logged in) -->
+	<% if (locals.user) { %>
+	<%- include('../partials/chat.ejs') %>
+	<% } %>
+
+  <script src="/js/game.js" defer></script>
+</body>
+
+</html>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

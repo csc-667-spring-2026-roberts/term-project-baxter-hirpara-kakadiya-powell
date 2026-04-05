@@ -1,0 +1,176 @@
+{
+  "users": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "username": "test",
+      "email": "test@sfsu.edu",
+      "password": "$2b$10$Bz.aoRonrbkFtl23cu5sWOUQt5g5l9V5AiuD/1nnfqV9dv2RnLP8C",
+      "balance": 1000,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "username": "alice",
+      "email": "alice@sfsu.edu",
+      "password": "$2b$10$Bz.aoRonrbkFtl23cu5sWOUQt5g5l9V5AiuD/1nnfqV9dv2RnLP8C",
+      "balance": 500,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "username": "bob",
+      "email": "bob@sfsu.edu",
+      "password": "$2b$10$Bz.aoRonrbkFtl23cu5sWOUQt5g5l9V5AiuD/1nnfqV9dv2RnLP8C",
+      "balance": 750,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    }
+  ],
+  "games": [
+    {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "status": 1,
+      "created_at": "2026-03-27T00:00:00.000Z",
+      "ended_at": null,
+      "updated_at": "2026-03-27T00:00:00.000Z",
+      "pot_amount": 150,
+      "turn_deadline_at": null,
+      "current_player_id": "00000000-0000-0000-0000-000000000001",
+      "max_seats": 6,
+      "small_blind": 1,
+      "big_blind": 2,
+      "last_raise_amount": 0,
+      "deck_position": 9
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000011",
+      "status": 1,
+      "created_at": "2026-03-27T00:00:00.000Z",
+      "ended_at": null,
+      "updated_at": "2026-03-27T00:00:00.000Z",
+      "pot_amount": 150,
+      "turn_deadline_at": null,
+      "current_player_id": "00000000-0000-0000-0000-000000000001",
+      "max_seats": 6,
+      "small_blind": 1,
+      "big_blind": 2,
+      "last_raise_amount": 0,
+      "deck_position": 9
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000020",
+      "status": 0,
+      "created_at": "2026-03-27T00:00:00.000Z",
+      "ended_at": null,
+      "updated_at": "2026-03-27T00:00:00.000Z",
+      "pot_amount": 0,
+      "turn_deadline_at": null,
+      "current_player_id": null,
+      "max_seats": 6,
+      "small_blind": 1,
+      "big_blind": 2,
+      "last_raise_amount": 0,
+      "deck_position": 0
+    }
+  ],
+  "game_users": [
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": "00000000-0000-0000-0000-000000000001",
+      "seat_no": 1,
+      "balance": 88,
+      "status": 0,
+      "is_dealer": true,
+      "joined_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": "00000000-0000-0000-0000-000000000002",
+      "seat_no": 2,
+      "balance": 95,
+      "status": 0,
+      "is_dealer": false,
+      "joined_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": "00000000-0000-0000-0000-000000000003",
+      "seat_no": 3,
+      "balance": 100,
+      "status": 0,
+      "is_dealer": false,
+      "joined_at": "2026-03-27T00:00:00.000Z"
+    }
+  ],
+  "game_cards": [
+    { "game_id": "00000000-0000-0000-0000-000000000010", "position": 6, "card": 12, "location": 1, "user_id": null },
+    { "game_id": "00000000-0000-0000-0000-000000000010", "position": 7, "card": 37, "location": 1, "user_id": null },
+    { "game_id": "00000000-0000-0000-0000-000000000010", "position": 8, "card":  4, "location": 1, "user_id": null },
+    { "game_id": "00000000-0000-0000-0000-000000000010", "position": 0, "card": 25, "location": 2, "user_id": "00000000-0000-0000-0000-000000000001" },
+    { "game_id": "00000000-0000-0000-0000-000000000010", "position": 1, "card": 38, "location": 2, "user_id": "00000000-0000-0000-0000-000000000001" }
+  ],
+  "game_actions": [
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": "00000000-0000-0000-0000-000000000001",
+      "action": 1,
+      "amount": null,
+      "deck_position": 2,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": "00000000-0000-0000-0000-000000000001",
+      "action": 2,
+      "amount": 10,
+      "deck_position": 6,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_id": null,
+      "action": 0,
+      "amount": null,
+      "deck_position": 9,
+      "created_at": "2026-03-27T00:00:00.000Z"
+    }
+  ],
+  "game_messages": [
+    {
+      "user_from": "00000000-0000-0000-0000-000000000001",
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_to": null,
+      "body": "gl everyone",
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "user_from": "00000000-0000-0000-0000-000000000002",
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_to": null,
+      "body": "ty u2",
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "user_from": "00000000-0000-0000-0000-000000000003",
+      "game_id": "00000000-0000-0000-0000-000000000010",
+      "user_to": null,
+      "body": "lets go",
+      "created_at": "2026-03-27T00:00:00.000Z"
+    }
+  ],
+  "dms": [
+    {
+      "user_from": "00000000-0000-0000-0000-000000000001",
+      "game_id": null,
+      "user_to": "00000000-0000-0000-0000-000000000002",
+      "body": "gg last game",
+      "created_at": "2026-03-27T00:00:00.000Z"
+    },
+    {
+      "user_from": "00000000-0000-0000-0000-000000000002",
+      "game_id": null,
+      "user_to": "00000000-0000-0000-0000-000000000001",
+      "body": "yeah wp",
+      "created_at": "2026-03-27T00:00:00.000Z"
+    }
+  ]
+}

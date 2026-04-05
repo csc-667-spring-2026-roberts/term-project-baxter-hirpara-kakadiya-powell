@@ -1,0 +1,177 @@
+/* special body for game to be fullscreen */
+.game-body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.game-viewport {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#game-container {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* shared classes */
+.game-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1.5rem;
+  background: #16213e;
+  font-size: 0.85rem;
+}
+
+.game-button {
+  background: #2a3a5e;
+  color: #e0e0e0;
+  border-color: #444;
+  padding: 0.3rem 0.8rem;
+}
+
+.game-button-group {
+  /* arrange in a row */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.game-input {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-color: #444;
+  padding: 0.3rem 0.5rem;
+  width: auto;
+}
+
+/* prefix game-input with '$' */
+.game-input-wrapper {
+  display: flex;
+  align-items: center;
+}
+.game-input-wrapper::before {
+  content: "$";
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+#game-top-bar {
+  justify-content: center;
+}
+
+#game-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  container-type: size;
+}
+
+#table {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  width: min(100cqw, calc(2 * 100cqh));
+}
+
+#felt {
+  position: absolute;
+  inset: 0;
+  background: #1a6b2a;
+  border-radius: 50%;
+  border: 6px solid #3d2b1f;
+}
+
+/* game view specific overrides for chat to behave as expected in game context */
+.game-body #chat-bar {
+  position: relative;
+}
+.game-body #chat-popout {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+}
+
+/* community cards */
+#community-cards {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.4rem;
+}
+
+#community-cards .card-slot {
+  width: clamp(40px, 6vw, 70px);
+}
+
+/* cards */
+.card-slot {
+  width: clamp(30px, 4vw, 55px);
+  aspect-ratio: 52 / 75;
+  border: 1px dashed #3a5a3a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.card-slot svg {
+  /* eliminate svg default inline gap */
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* seats */
+.seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  transform: translate(-50%, -50%);
+}
+
+.seat-cards {
+  display: flex;
+  gap: 2px;
+}
+.seat-info {
+  text-align: center;
+}
+.seat-dealer {
+  min-height: 1em;
+}
+
+/* bottom bar */
+#player-hand-bar {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+}
+#player-hand-bar .card-slot {
+  width: clamp(50px, 7vw, 80px);
+}
+#action-bar {
+  justify-content: center;
+  gap: 0.4rem;
+}
+#raise-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+#raise-input {
+  text-align: center;
+}
+
+/* vim: set ts=2 sw=2 sts=2 noet filetype=css: */

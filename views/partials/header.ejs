@@ -1,0 +1,39 @@
+<!-- /partials/header.ejs - Header partial -->
+<header>
+	<!-- lhs: list active games -->
+	<div class="dropdown">
+		<button class="dropdown-toggle">My Games</button>
+		<div class="dropdown-menu">
+			<% if (locals.games && locals.games.length > 0) { %>
+			<% locals.games.forEach(function(e) { %>
+			<a href="/game/<%= e.id %>"><%= e.name %></a>
+			<% }); %>
+			<% } else { %>
+			<span>No active games</span>
+			<% } %>
+		</div>
+	</div>
+
+	<!-- middle button: new game -->
+	<button class="new-game" onclick="location.href='/game/new'">New Game</button>
+
+	<!-- rhs: profile dropdown -->
+	<div class="dropdown">
+		<button class="dropdown-toggle">Profile</button>
+		<div class="dropdown-menu">
+			<% if (locals.user) { %>
+			<span><%= locals.user.username %></span>
+			<span><%= locals.user.email %></span>
+			<span>$<%= locals.user.balance.toFixed(2) %></span>
+			<form action="/logout" method="POST">
+				<button type="submit">Logout</button>
+			</form>
+			<% } else { %>
+			<span>Anonymous</span>
+			<a href="/login">Log in</a>
+			<% } %>
+		</div>
+	</div>
+</header>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->
