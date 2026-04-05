@@ -57,7 +57,6 @@ export interface GameUser {
   user_id: string;
   // not in db, but always join with user table to look this up, since the
   // user_id's username should be metadata for a GameUser.
-  username: string;
   seat_no: number;
   balance: number;
   status: number;
