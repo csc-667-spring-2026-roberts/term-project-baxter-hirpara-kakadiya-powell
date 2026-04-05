@@ -5,18 +5,17 @@
  *
  * Mock data seeding script for local/test DB.
  * Data is sourced from seed.json, which is also imported by src/mock.ts.
- *
- * MOCK USER CREDENTIALS (bcrypt, cost 10):
- *   email              | password
- *   -------------------+---------
- *   test@sfsu.edu      | test
- *   alice@sfsu.edu     | test
- *   bob@sfsu.edu       | test
+ * Pre-bcrypt credentials are stored in seed.json under "credentials".
+ * Hashed passwords are written to database/credentials.csv as a side effect.
  *
  * Usage:
  *   npx ts-node database/seed.ts
  */
 
+import bcrypt from "bcrypt";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import db from "../src/db/connection.js";
 import { RollbackError } from "../src/util/error.js";
 import logger from "../src/util/logger.js";
@@ -24,6 +23,25 @@ import seedData from "./seed.json" assert { type: "json" };
 
 async function seed() {
   logger.info("seeding database...");
+
+  // -- Hash credentials and patch seedData --
+  logger.info("hashing credentials...");
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const credLines = ["email,password"];
+
+  for (const cred of seedData.credentials) {
+    const hashed = await bcrypt.hash(cred.password, 10);
+    const user = seedData.users.find((u) => u.email === cred.email);
+    if (user) user.password = hashed;
+    credLines.push(`${cred.email},${cred.password}`);
+    logger.debug(`hashed: ${cred.email}`);
+  }
+
+  fs.writeFileSync(
+    path.join(__dirname, "credentials.csv"),
+    credLines.join("\n") + "\n",
+  );
+  logger.info("credentials.csv written");
 
   try {
     await db.tx(async (t) => {
