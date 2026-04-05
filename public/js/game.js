@@ -121,3 +121,46 @@ function layoutSeats() {
 }
 
 layoutSeats();
+
+// SSE - Last Action Labels
+const ACTION_LABELS = {
+  [Action.BET]:    (amount) => `Bet $${amount}`,
+  [Action.CALL]:   (amount) => `Call $${amount}`,
+  [Action.RAISE]:  (amount) => `Raise $${amount}`,
+  [Action.CHECK]:  ()       => "Check",
+  [Action.FOLD]:   ()       => "Fold",
+  [Action.ALL_IN]: (amount) => `All In $${amount}`,
+};
+
+function setLastAction(seatNo, action, amount) {
+  const el = document.getElementById(`seat-last-action-${seatNo}`);
+  if (!el) return;
+  const label = ACTION_LABELS[action];
+  if (!label) return;
+  el.textContent = label(amount);
+  el.classList.remove("fade-out");
+  void el.offsetWidth; // force reflow to restart animation
+  el.classList.add("fade-out");
+}
+
+// Connect to SSE
+const evtSource = new EventSource(`/api/games/${gameId}/events`);
+
+evtSource.addEventListener("action", (e) => {
+  const data = JSON.parse(e.data);
+  const matchingSeat = document.querySelector(`.seat[data-userid="${data.userId}"]`);
+  if (matchingSeat) {
+    const seatNo = matchingSeat.dataset.seat;
+    setLastAction(seatNo, data.action, data.amount);
+  }
+});
+
+  // TODO: once seat has data-userid, match userId -> seatNo properly
+  // Temporary: broadcast label to the seat matching userId
+  // You'll need to add data-userid="<%= seatPlayer.user_id %>" to seat.ejs
+  const matchingSeat = document.querySelector(`.seat[data-userid="${data.userId}"]`);
+  if (matchingSeat) {
+    const seatNo = matchingSeat.dataset.seat;
+    setLastAction(seatNo, data.action, data.amount);
+  }
+});

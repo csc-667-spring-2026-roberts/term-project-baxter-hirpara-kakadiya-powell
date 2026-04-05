@@ -20,17 +20,6 @@ export function validatePosition(pos: number): boolean {
 }
 
 /**
- * Restore a user's balance after leaving a game.
- *
- * @param _userId - The user's ID
- * @param _amount - The amount to restore
- * @returns TRUE for SUCCESS, FALSE for FAILURE
- */
-export function restoreBalance(_userId: string, _amount: number): boolean {
-  return true;
-}
-
-/**
  * Shuffles a deck of cards.
  *
  * @returns Shuffled array of cards.
