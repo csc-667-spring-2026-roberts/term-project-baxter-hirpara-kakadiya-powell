@@ -115,8 +115,8 @@ function layoutSeats() {
     //    bottom of the screen
     //  * evenly distribute n seats around circle
     var angle = (i / totalSeats) * 2 * Math.PI + Math.PI / 2;
-    seat.style.left = 50 + Math.cos(angle) * rx + "%";
-    seat.style.top = 50 + Math.sin(angle) * ry + "%";
+    seat.style.left = (50 + Math.cos(angle) * rx) + "%";
+    seat.style.top = (50 + Math.sin(angle) * ry) + "%";
   });
 }
 
