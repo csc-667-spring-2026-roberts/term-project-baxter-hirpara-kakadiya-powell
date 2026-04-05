@@ -29,43 +29,155 @@ import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
  */
 class GameRepository implements IRepository<Game> {
   /** find a game by ID */
-  async findById(_id: string): Promise<Game | null> {
-    return MOCK_GAME;
-  }
+  async findById(id: string): Promise<Game | null> {
+    if (!id) {
+      logger.warn(`invalid id: ${id}`);
+      return null;
+    }
+    try {
+      return await db.oneOrNone<Game>("SELECT * FROM games WHERE id = $1", [id]);
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /** create a new game */
-  async create(_data: Partial<Game>): Promise<Game | null> {
-    return MOCK_GAME;
-  }
+  async create(data: Partial<Game>): Promise<Game | null> {
+    if (!data.max_seats) {
+      logger.warn("invalid max_seats");
+      return null;
+    }
+    try {
+      return await db.one<Game>(
+        `INSERT INTO games (
+          id, status, created_at, updated_at, pot_amount,
+          turn_deadline_at, current_player_id, max_seats,
+          small_blind, big_blind, last_raise_amount, deck_position
+        ) VALUES (
+          gen_random_uuid(), $1, NOW(), NOW(), $2,
+          $3, $4, $5, $6, $7, $8, $9
+        ) RETURNING *`,
+        [
+          data.status ?? GameStatus.WAITING,
+          data.pot_amount ?? 0,
+          data.turn_deadline_at ?? null,
+          data.current_player_id ?? null,
+          data.max_seats,
+          data.small_blind ?? 0,
+          data.big_blind ?? 0,
+          data.last_raise_amount ?? 0,
+          data.deck_position ?? 0,
+        ],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /** update a game by ID */
-  async update(_id: string, _data: Partial<Game>): Promise<boolean> {
-    return false;
-  }
+  async update(id: string, data: Partial<Game>): Promise<boolean> {
+    try {
+      const fields = Object.keys(data);
+      if (fields.length <= 0) {
+        logger.warn(`no fields to update`);
+        return false;
+      }
+      const allFields = { ...data, updated_at: new Date() };
+      const allKeys = Object.keys(allFields);
+      const setClauses = allKeys.map((f, i) => `${f} = $${String(i + 1)}`);
+      const values: unknown[] = Object.values(allFields);
+      values.push(id);
+      const result = await db.result(
+        `UPDATE games SET ${setClauses.join(", ")} WHERE id = $${String(values.length)}`,
+        values,
+      );
+      if (result.rowCount <= 0) {
+        logger.warn(`update for id (${id}) failed`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /** delete a game by ID */
-  async delete(_id: string): Promise<boolean> {
-    return false;
-  }
+  async delete(id: string): Promise<boolean> {
+    try {
+      const result = await db.result("DELETE FROM games WHERE id = $1", [id]);
+      if (result.rowCount <= 0) {
+        logger.warn(`delete for id (${id}) failed`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
-  async findByUserId(_userId: string): Promise<Game[] | null> {
-    return MOCK_GAMES;
+async findByUserId(userId: string): Promise<Game[] | null> {
+  if (!userId) {
+    logger.warn(`invalid userId: ${userId}`);
+    return null;
   }
+  try {
+    return await db.manyOrNone<Game>(
+      `SELECT g.* FROM games g
+       JOIN game_users gu ON g.id = gu.game_id
+       WHERE gu.user_id = $1
+       ORDER BY g.created_at DESC`,
+      [userId],
+    );
+  } catch (err) {
+    logger.error(String(err));
+    throw err;
+  }
+}
 
   /**
    * Find available games matching blind levels, sorted on index
    * IDX_games_status_created_at.
    */
-  async findAvailableBlind(_smallBlind: number, _bigBlind: number): Promise<Game[] | null> {
-    return MOCK_GAMES;
-  }
+  async findAvailableBlind(smallBlind: number, bigBlind: number): Promise<Game[] | null> {
+    if (!smallBlind || !bigBlind) {
+      logger.warn(`invalid smallBlind or bigBlind`);
+      return null;
+    }
+    try {
+      return await db.manyOrNone<Game>(
+        `SELECT * FROM games
+         WHERE status = $1
+         AND small_blind = $2
+         AND big_blind = $3
+         ORDER BY created_at`,
+        [GameStatus.WAITING, smallBlind, bigBlind],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /**
    * Find all available games, sorted on index IDX_games_status_created_at.
    */
   async findAvailableAll(): Promise<Game[] | null> {
-    return MOCK_GAMES;
-  }
+    try {
+      return await db.manyOrNone<Game>(
+        `SELECT * FROM games
+         WHERE status = $1
+         ORDER BY created_at`,
+        [GameStatus.WAITING],
+      );
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
+}
 
   /**
    * Add a player to a game, deduct buy-in from user balance. DB rollback on
