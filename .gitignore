@@ -22,3 +22,6 @@ npm-debug.log*
 .env.local
 
 secrets
+
+# build system generates js from ts src/client
+public/js/*

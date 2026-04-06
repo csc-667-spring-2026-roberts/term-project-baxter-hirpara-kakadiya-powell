@@ -3,13 +3,25 @@
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <title><%= typeof title !== 'undefined' ? title : 'Texas Hold\'em Poker II' %></title>
 
+<!-- css for every page -->
 <link rel='stylesheet' href='/css/main.css'>
+
+<!-- page-specific css that backend render specifies -->
 <% if (typeof styles !== 'undefined' && styles.length > 0) { %>
 <% styles.forEach(function(style) { %>
 <link rel='stylesheet' href='/css/<%= style %>.css'>
 <% }); %>
 <% } %>
+
+<!-- js for every page -->
 <script src='/js/main.js' defer></script>
 <script src='/js/chat.js' defer></script>
 
-<!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->
+<!-- page-specific js that backend render specifies -->
+<% if (typeof scripts !== 'undefined' && scripts.length > 0) { %>
+<% scripts.forEach(function(script) { %>
+<script src='/js/<%= script %>.js' defer></script>
+<% }); %>
+<% } %>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=embedded_template: -->

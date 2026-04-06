@@ -6,7 +6,9 @@
  * Model and repository types.
  */
 
-import { CardLocation } from "../env.js";
+// NOTE: frontend also uses these models for their data consumption - DO NOT put
+// server dependencies in the model types
+import { CardLocation } from "../shared/env.js";
 
 /**
  * Generic repository contract for base CRUD operations.
@@ -47,6 +49,8 @@ export interface Game {
   big_blind: number;
   last_raise_amount: number;
   deck_position: number;
+  // xxx new addition - should we track this?
+  player_count: number;
 }
 
 /**

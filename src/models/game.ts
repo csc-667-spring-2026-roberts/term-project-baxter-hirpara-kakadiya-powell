@@ -11,9 +11,9 @@
 
 import db, { pgp } from "../db/connection.js";
 import logger from "../util/logger.js";
-import { validatePosition, restoreBalance } from "../util/util.js";
+import { validatePosition, restoreBalance } from "../shared/util.js";
 import { RollbackError } from "../util/error.js";
-import { DECK_SIZE, GameStatus, UserStatus, Action, CardLocation } from "../env.js";
+import { DECK_SIZE, GameStatus, UserStatus, Action, CardLocation } from "../shared/env.js";
 import {
   MOCK_USER,
   MOCK_GAME,
@@ -77,7 +77,11 @@ class GameRepository implements IRepository<Game> {
    * @param buyIn - The buy-in amount to deduct from user balance
    * @returns TRUE for SUCCESS, FALSE for FAILURE
    */
+  // xxx do we need buyIn? do we want to just have a set amount, or a
+  // user-specified as some multiple of bb? for now, let's start simple and just
+  // use a constant in the routes for the buyIn
   async addUser(gameId: string, userId: string, seatNo: number, buyIn: number): Promise<boolean> {
+    // xxx update player_count and seatNo of player
     if (!gameId || !userId || seatNo < 0 || buyIn <= 0) {
       logger.warn("invalid parameters for addUser");
       return false;

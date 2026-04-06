@@ -11,8 +11,22 @@
  */
 export class HttpError extends Error {
   constructor(
-    public status: number,
-    message: string,
+    message: string = "A HTTP error has occurred",
+    public status: number = 404,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Helper class for API response errors (optional body to send).
+ * default: "An unexpected error has occurred", {}, 500
+ */
+export class ResponseError extends Error {
+  constructor(
+    public body: Record<string, unknown> = {},
+    message: string = "A response error has occurred",
+    public status: number = 500,
   ) {
     super(message);
   }

@@ -25,9 +25,9 @@ const RANKS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen
 const CARD_SVG = "/img/svg-cards.svg";
 const CARD_VIEWBOX = "0 0 169.075 244.64";
 
-function renderCard(cardNum, container) {
-  const suit = SUITS[Math.floor(cardNum / 13)];
-  const rank = RANKS[cardNum % 13];
+function renderCard(cardNum: number, container: Element): void {
+  const suit = SUITS[Math.floor(cardNum / 13)] as string;
+  const rank = RANKS[cardNum % 13] as string;
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
@@ -40,7 +40,7 @@ function renderCard(cardNum, container) {
   container.appendChild(svg);
 }
 
-function renderCardBack(container, fill = "#000") {
+function renderCardBack(container: Element, fill = "#000"): void {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
 
@@ -54,18 +54,18 @@ function renderCardBack(container, fill = "#000") {
 }
 
 // ACTION BAR
-var gameId = document.getElementById("game-container").dataset.gameId;
+const gameId = (document.getElementById("game-container") as HTMLElement).dataset.gameId as string;
 
-document.querySelectorAll("#action-bar button[data-action]").forEach((btn) => {
+document.querySelectorAll<HTMLButtonElement>("#action-bar button[data-action]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    var action = Number(btn.dataset.action);
-    var amount =
+    const action = Number(btn.dataset.action);
+    const amount =
       action === Action.RAISE
-        ? Number(document.getElementById("raise-input").value || 0)
+        ? Number((document.getElementById("raise-input") as HTMLInputElement).value || 0)
         : undefined;
 
     // need to fetch because can't do server-side POST page reloads with SSE
-    fetch("/api/games/" + gameId + "/action", {
+    void fetch(`/api/games/${gameId}/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: action, amount: amount }),
@@ -77,10 +77,10 @@ document.querySelectorAll("#action-bar button[data-action]").forEach((btn) => {
 /**
  * Render cards on game-area.
  */
-document.querySelectorAll(".card-slot[data-card]").forEach((slot) => {
+document.querySelectorAll<HTMLElement>(".card-slot[data-card]").forEach((slot) => {
   renderCard(Number(slot.dataset.card), slot);
 });
-document.querySelectorAll(".card-slot[data-card-back]").forEach((slot) => {
+document.querySelectorAll<HTMLElement>(".card-slot[data-card-back]").forEach((slot) => {
   renderCardBack(slot);
 });
 
@@ -88,35 +88,35 @@ document.querySelectorAll(".card-slot[data-card-back]").forEach((slot) => {
 // Distribute seats evenly around the felt based on its rendered dimensions.
 // Reads the felt's actual width/height to derive an ellipse, so this works
 // regardless of whether the felt is circular, oval, or rectangular.
-var table = document.getElementById("table");
-var felt = document.getElementById("felt");
-var seats = table.querySelectorAll(".seat");
-var totalSeats = seats.length;
+const table = document.getElementById("table") as HTMLElement;
+const felt = document.getElementById("felt") as HTMLElement;
+const seats = table.querySelectorAll<HTMLElement>(".seat");
+const totalSeats = seats.length;
 
-function layoutSeats() {
-  var seatH = seats[0].offsetHeight;
-  var seatW = seats[0].offsetWidth;
-  var tableW = table.offsetWidth;
-  var tableH = table.offsetHeight;
+function layoutSeats(): void {
+  const seatH = seats[0].offsetHeight;
+  const seatW = seats[0].offsetWidth;
+  const tableW = table.offsetWidth;
+  const tableH = table.offsetHeight;
 
   // the felt orbit - seats center on this ellipse
-  var feltW = felt.offsetWidth;
-  var feltH = felt.offsetHeight;
+  const feltW = felt.offsetWidth;
+  const feltH = felt.offsetHeight;
 
   // shrink orbit so full seat stays inside the table
   // x radii
-  var rx = ((feltW / 2 - seatW / 2) / tableW) * 100;
+  const rx = ((feltW / 2 - seatW / 2) / tableW) * 100;
   // y radii
-  var ry = ((feltH / 2 - seatH / 2) / tableH) * 100;
+  const ry = ((feltH / 2 - seatH / 2) / tableH) * 100;
 
   seats.forEach((seat, i) => {
     //  * full circle is 2 * Math.PI
     //  * Math.PI / 2 = 90 degrees, to rotate seat 0 from the right to the
     //    bottom of the screen
     //  * evenly distribute n seats around circle
-    var angle = (i / totalSeats) * 2 * Math.PI + Math.PI / 2;
-    seat.style.left = (50 + Math.cos(angle) * rx) + "%";
-    seat.style.top = (50 + Math.sin(angle) * ry) + "%";
+    const angle = (i / totalSeats) * 2 * Math.PI + Math.PI / 2;
+    seat.style.left = String(50 + Math.cos(angle) * rx) + "%";
+    seat.style.top = String(50 + Math.sin(angle) * ry) + "%";
   });
 }
 

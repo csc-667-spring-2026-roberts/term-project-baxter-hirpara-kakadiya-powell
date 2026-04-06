@@ -66,7 +66,7 @@ router.post("/users/:id/password", requireAuth, (_req: Request, res: Response) =
  * xxx STRETCH
  */
 router.get("/users/:id/games", (_req: Request, res: Response) => {
-  res.render("/");
+  res.json(null);
 });
 
 /**
@@ -74,7 +74,7 @@ router.get("/users/:id/games", (_req: Request, res: Response) => {
  * xxx STRETCH
  */
 router.get("/users/:id/balance", (_req: Request, res: Response) => {
-  res.render("/");
+  res.json(null);
 });
 
 export default router;

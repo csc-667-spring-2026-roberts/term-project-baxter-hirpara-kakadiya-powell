@@ -2,23 +2,30 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import usersRouter from "./routes/api/users.js";
-import authRouter from "./routes/auth.js";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import flash from "connect-flash";
 import morgan from "morgan";
+import expressLayouts from "express-ejs-layouts";
+import livereload from "livereload";
+import connectLiveReload from "connect-livereload";
+
+import usersRouter from "./routes/api/users.js";
+import authRouter from "./routes/auth.js";
 import logger from "./util/logger.js";
 import UserRepository from "./models/user.js";
 import GameRepository from "./models/game.js";
-import { PORT, CMDS } from "./env.js";
+import { CMDS, GAME_CONFIGS } from "./shared/env.js";
 import { errorHandler } from "./routes/middleware.js";
-import expressLayouts from "express-ejs-layouts";
 import publicRouter from "./routes/public.js";
 import gameRouter from "./routes/game.js";
 import gamesRouter from "./routes/api/games.js";
 import messagesRouter from "./routes/api/messages.js";
 import userRouter from "./routes/user.js";
+import lobbyRouter from "./routes/lobby.js";
+
+// Use environment variable or fallback to string
+export const PORT: string = process.env.PORT ?? "3000";
 
 const app = express();
 
@@ -26,6 +33,20 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATIC_DIR = path.join(__dirname, "..", "public");
+const VIEWS_DIR = path.join(__dirname, "..", "views");
+
+// don't use livereload in prod
+if (process.env.NODE_ENV !== "production") {
+  const liveReloadServer = livereload.createServer({
+    // all frontend files, pages reload on change
+    exts: ["ejs", "css", "js", "ts"],
+  });
+
+  // watch frontend dirs
+  liveReloadServer.watch([STATIC_DIR, VIEWS_DIR]);
+
+  app.use(connectLiveReload());
+}
 
 // ejs setup
 app.set("view engine", "ejs");
@@ -51,6 +72,12 @@ app.use((req, res, next) => {
     // risk
     res.locals.cmd = CMDS[cmd] ?? null;
   }
+  next();
+});
+
+// globals on every response
+app.use((_req, res, next) => {
+  res.locals.gameConfigs = GAME_CONFIGS;
   next();
 });
 
@@ -142,6 +169,7 @@ app.use("/", publicRouter);
 app.use("/", authRouter);
 app.use("/", gameRouter);
 app.use("/", userRouter);
+app.use("/", lobbyRouter);
 
 // api routes:
 app.use("/api", usersRouter);
