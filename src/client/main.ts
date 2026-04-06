@@ -23,23 +23,35 @@ document.querySelectorAll<HTMLElement>(".dropdown-toggle").forEach((btn) => {
 
 document.addEventListener("click", (e) => {
   if (!(e.target instanceof HTMLElement) || !e.target.closest(".dropdown"))
-    document.querySelectorAll(".dropdown").forEach((d) => { d.classList.remove("open"); });
+    document.querySelectorAll(".dropdown").forEach((d) => {
+      d.classList.remove("open");
+    });
 });
 
 // after css animations, remove flash messages
 document.querySelectorAll<HTMLElement>(".flash").forEach((el) => {
-  el.addEventListener("animationend", () => { el.remove(); });
+  el.addEventListener("animationend", () => {
+    el.remove();
+  });
 });
 
 // dialog modal dynamic logic:
 if (createGameButton && createGameDialog) {
-  createGameButton.addEventListener("click", () => { createGameDialog.showModal(); });
-  createGameCancel.addEventListener("click", () => { createGameDialog.close(); });
+  createGameButton.addEventListener("click", () => {
+    createGameDialog.showModal();
+  });
+  createGameCancel.addEventListener("click", () => {
+    createGameDialog.close();
+  });
 }
 
 if (findGameButton && findGameDialog) {
-  findGameButton.addEventListener("click", () => { findGameDialog.showModal(); });
-  findGameCancel.addEventListener("click", () => { findGameDialog.close(); });
+  findGameButton.addEventListener("click", () => {
+    findGameDialog.showModal();
+  });
+  findGameCancel.addEventListener("click", () => {
+    findGameDialog.close();
+  });
 }
 
 if (findGameSubmit && findGameResult) {

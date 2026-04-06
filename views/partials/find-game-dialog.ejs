@@ -4,14 +4,11 @@
 	<label for="find-config">Config</label>
 	<select id="find-config">
 		<% if (locals.gameConfigs) { %>
-		  <% Object.entries(locals.gameConfigs).forEach(([key, cfg]) => { %>
-		    <option value="<%= key %>"
-          data-small-blind="<%= cfg.smallBlind %>"
-          data-big-blind="<%= cfg.bigBlind %>" 
-        >
-          <%= cfg.smallBlind %>/<%= cfg.bigBlind %> blinds, <%= cfg.maxSeats %> seats
-        </option>
-		  <% }); %>
+		<% Object.entries(locals.gameConfigs).forEach(([key, cfg]) => { %>
+		<option value="<%= key %>" data-small-blind="<%= cfg.smallBlind %>" data-big-blind="<%= cfg.bigBlind %>">
+			<%= cfg.smallBlind %>/<%= cfg.bigBlind %> blinds, <%= cfg.maxSeats %> seats
+		</option>
+		<% }); %>
 		<% } %>
 	</select>
 	<button id="find-game-submit" type="submit">Find</button>
