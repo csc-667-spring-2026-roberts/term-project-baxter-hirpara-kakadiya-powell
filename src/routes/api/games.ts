@@ -42,9 +42,6 @@ router.get(
         // xxx maybe we want to change the contract of findAvailableAll to just
         // always return an empty list, if this is our common case
       }
-      // xxx player filtering should be done with db!
-
-      //const players = await GameRepository.getUsers(game.id);
 
       res.json({ games: games ?? [] });
     } catch (err) {
