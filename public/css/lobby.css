@@ -1,0 +1,39 @@
+/* lobby page */
+
+.container {
+	text-align: center;
+}
+
+#lobby-buttons,
+#lobby-filters {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.segment {
+	display: flex;
+}
+.segment input { display: none; }
+.segment label {
+	padding: 0.4rem 0.8rem;
+	border: 1px solid #333;
+	cursor: pointer;
+}
+.segment label:first-of-type { border-radius: 4px 0 0 4px; }
+.segment label:last-of-type { border-radius: 0 4px 4px 0; }
+.segment input:checked + label {
+	background: #e94560;
+	border-color: #e94560;
+}
+
+.game-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-evenly;
+	margin-bottom: 1rem;
+}
+
+/* vim: set ts=2 sw=2 sts=2 noet filetype=css: */

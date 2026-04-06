@@ -37,4 +37,4 @@ done
 echo "PostgreSQL is ready"
 
 echo "Running dev:server (blue) and dev:client (green)..."
-npx concurrently -n server,client -c blue,green "npm dev:server" "npm dev:client"
+npx concurrently -n server,client -c blue,green "npm run dev:server" "npm run dev:client"

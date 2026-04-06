@@ -35,7 +35,7 @@ export function gameStatus(status: GameStatus): string {
     case GameStatus.WAITING:
       return "Waiting";
     case GameStatus.PLAYING:
-      return "Playing";
+      return "Active";
     case GameStatus.PAUSED:
       return "Paused";
     case GameStatus.ENDED:
