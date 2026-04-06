@@ -14,8 +14,10 @@
 		</div>
 	</div>
 
-	<!-- middle button: new game -->
-	<button class="new-game" onclick="location.href='/game/new'">New Game</button>
+	<!-- middle button: find game -->
+	<button id="find-game-button">Find Game</button>
+  <!-- dialog modal for find-game-button -->
+  <%- include('partials/find-game-dialog') %>
 
 	<!-- rhs: profile dropdown -->
 	<div class="dropdown">

@@ -41,7 +41,7 @@ function errorHandler(
   if (req.originalUrl.startsWith("/api")) {
     res.status(err.status || 500).json({
       success: false,
-      error: err.message || "An unexpected error occurred",
+      error: err.message || "An unexpected error has occurred",
     });
     return;
   }
@@ -51,7 +51,7 @@ function errorHandler(
     title: "Error",
     styles: ["error"],
     error: {
-      message: err.message || "An unexpected error occurred",
+      message: err.message || "An unexpected error has occurred",
       status: err.status || 500,
     },
   });

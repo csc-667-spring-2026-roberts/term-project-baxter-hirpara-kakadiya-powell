@@ -6,8 +6,9 @@
  * General utility.
  */
 
-import { DECK_SIZE } from "../env.js";
+import { DECK_SIZE, MIN_SEATS, MAX_SEATS, GAME_CONFIGS } from "../shared/env.js";
 import crypto from "crypto";
+import { GameConfig } from "./types.js";
 
 /**
  * Validate that a deck position is within bounds of a deck.
@@ -17,6 +18,47 @@ import crypto from "crypto";
  */
 export function validatePosition(pos: number): boolean {
   return pos >= 0 && pos < DECK_SIZE;
+}
+
+/**
+ * Validate that blinds are a valid GameConfig.
+ *
+ * @param sm - Small blind
+ * @param big - Big blind
+ * @returns TRUE if valid, FALSE if invalid
+ */
+export function validateBlinds(sm: number, big: number): boolean {
+  return Object.values(GAME_CONFIGS).some((v) => sm === v.smallBlind && big === v.bigBlind);
+}
+
+/**
+ * Validate that cfg is a valid game config.
+ *
+ * @pre this function is the validation gateway for GameConfig - caller is not
+ * responsible for preconditions.
+ *
+ * @param cfg - The GameConfig to validate
+ * @returns TRUE if valid, FALSE if invalid
+ */
+export function validateGameConfig(cfg: GameConfig | null): boolean {
+  if (!cfg) {
+    return false;
+  }
+
+  return Object.values(GAME_CONFIGS).some(
+    (v) =>
+      cfg.smallBlind === v.smallBlind && cfg.bigBlind === v.bigBlind && cfg.maxSeats === v.maxSeats,
+  );
+}
+
+/**
+ * Validate that seats are within MIN/MAX seat bounds.
+ *
+ * @param seats - The seats to validate
+ * @returns TRUE if valid, FALSE if invalid
+ */
+export function validateSeats(seats: number): boolean {
+  return seats <= MAX_SEATS && seats >= MIN_SEATS;
 }
 
 /**

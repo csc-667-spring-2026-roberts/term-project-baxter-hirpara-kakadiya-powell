@@ -5,6 +5,8 @@ set -euo pipefail
 APP_ROOT="$(git rev-parse --show-toplevel)"
 source "$APP_ROOT/scripts/env.sh"
 
+NODE_BIN="$APP_ROOT"
+
 # Start container if not already running
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
 	docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
@@ -34,4 +36,5 @@ done
 
 echo "PostgreSQL is ready"
 
-exec npx tsx watch src/index.ts
+echo "Running dev:server (blue) and dev:client (green)..."
+npx concurrently -n server,client -c blue,green "npm dev:server" "npm dev:client"

@@ -7,7 +7,7 @@
  */
 
 import { Game, GameUser, GameCard, GameAction, User, Message } from "./models/types.js";
-import { GameStatus, CardLocation, Action } from "./env.js";
+import { GameStatus, CardLocation, Action } from "./shared/env.js";
 import seedData from "../database/seed.json" assert { type: "json" };
 
 // Users
@@ -85,5 +85,3 @@ export const MOCK_DMS: Message[] = seedData.dms.map((m, i) => ({
   username: MOCK_USERS.find((u) => u.id === m.user_from)?.username ?? "",
   created_at: new Date(m.created_at),
 }));
-
-// vim: set ts=2 sw=2 sts=2 noet filetype=typescript:

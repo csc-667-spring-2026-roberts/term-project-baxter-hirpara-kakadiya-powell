@@ -1,0 +1,15 @@
+<%# partials/create-game-dialog.ejs - Create game dialog modal %>
+
+<dialog id="create-game-dialog">
+	<h3>Create Game</h3>
+	<form action="/api/games/create" method="POST">
+		<label for="create-config">Config</label>
+		<select name="config" id="create-config">
+			<% Object.entries(locals.gameConfigs).forEach(([key, cfg]) => { %>
+			<option value="<%= key %>"><%= cfg.smallBlind %>/<%= cfg.bigBlind %> blinds, <%= cfg.maxSeats %> seats</option>
+			<% }); %>
+		</select>
+		<button id="create-game-submit" type="submit">Create</button>
+	</form>
+	<button id="create-game-cancel">Cancel</button>
+</dialog>

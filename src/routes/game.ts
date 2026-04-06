@@ -9,11 +9,11 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import { HttpError } from "../util/error.js";
-import { TITLE } from "../env.js";
+import { TITLE } from "../shared/env.js";
 import logger from "../util/logger.js";
 import GameRepository from "../models/game.js";
 import UserRepository from "../models/user.js";
-//import { shuffleDeck } from "../util/util.js";
+//import { shuffleDeck } from "../shared/util.js";
 import { GameParams } from "../types.js";
 import { GameCard, User } from "../models/types.js";
 
@@ -29,19 +29,19 @@ router.get("/game/:id", async (req: Request<GameParams>, res: Response, next: Ne
     // game data:
     const game = await GameRepository.findById(id);
     if (!game) {
-      next(new HttpError(404, "Game not found"));
+      next(new HttpError("Game not found", 404));
       return;
     }
 
     const players = await GameRepository.getUsers(id);
     if (!players) {
-      next(new HttpError(404, "No players in game"));
+      next(new HttpError("No players in game", 404));
       return;
     }
 
     const communityCards = await GameRepository.getCommunityCards(id);
     if (!communityCards) {
-      next(new HttpError(404, "Failed to retrieve community cards"));
+      next(new HttpError("Failed to retrieve community cards", 404));
       return;
     }
 
@@ -61,13 +61,13 @@ router.get("/game/:id", async (req: Request<GameParams>, res: Response, next: Ne
       if (isPlayer) {
         player = await UserRepository.findById(userId);
         if (!player) {
-          next(new HttpError(404, "Failed to retrieve player userdata"));
+          next(new HttpError("Failed to retrieve player userdata", 404));
           return;
         }
 
         hand = await GameRepository.getHand(id, userId);
         if (!hand) {
-          next(new HttpError(404, "Failed to retrieve player hand"));
+          next(new HttpError("Failed to retrieve player hand", 404));
           return;
         }
       }

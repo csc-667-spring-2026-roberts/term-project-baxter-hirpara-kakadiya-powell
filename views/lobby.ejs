@@ -1,0 +1,50 @@
+<%# lobby.ejs - Lobby page %>
+<%- contentFor('body') %>
+
+<h2>Lobby</h2>
+
+<div id="lobby-buttons">
+  <button id="find-game-button">Find Game</button>
+  <!-- dialog modal for find-game-button -->
+  <%- include('partials/find-game-dialog') %>
+
+	<button id="create-game-button">Create Game</button>
+  <!-- dialog modal for create-game-button -->
+  <%- include('partials/create-game-dialog') %>
+
+	<label for="filter-config">Filter:</label>
+	<select id="filter-select">
+		<option value="">All</option>
+		<% Object.entries(locals.gameConfigs).forEach(([k, v]) => { %>
+			<option value="<%= k %>"
+				data-small-blind="<%= v.smallBlind %>"
+				data-big-blind="<%= v.bigBlind %>"
+				data-max-seats="<%= v.maxSeats %>"
+			>
+				<%= v.smallBlind %>/<%= v.bigBlind %> blinds, <%= v.maxSeats %> seats
+			</option>
+		<% }); %>
+	</select>
+</div>
+
+<section id="games-list">
+  <h3>Games</h3>
+
+	<p>Loading games...</p>
+
+	<!-- xxx filter on the db or the frontend logic? -->
+  <template id="game-card-template">
+  	<div class="game-card">
+  		<span data-game-id></span>
+  		<span data-game-players></span>
+  		<span data-game-blinds></span>
+  		<span data-game-status></span>
+  		<form data-join-form method="POST" style="display:inline">
+  			<button type="submit">Join</button>
+  		</form>
+			<a data-spectate-link>Spectate</a>
+  	</div>
+  </template>
+</section>
+
+<!-- vim: set ts=2 sw=2 sts=2 noet filetype=embedded_template: -->

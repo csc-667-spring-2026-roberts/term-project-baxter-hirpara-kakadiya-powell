@@ -6,7 +6,7 @@
  * General public routes that don't require authentication.
  */
 
-import { TITLE } from "../env.js";
+import { TITLE } from "../shared/env.js";
 import { Router, Request, Response } from "express";
 
 const router = Router();

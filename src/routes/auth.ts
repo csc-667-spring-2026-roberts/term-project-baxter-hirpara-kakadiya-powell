@@ -9,7 +9,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import logger from "../util/logger.js";
 import UserRepository from "../models/user.js";
-import { TITLE } from "../env.js";
+import { TITLE } from "../shared/env.js";
 
 const router = Router();
 
