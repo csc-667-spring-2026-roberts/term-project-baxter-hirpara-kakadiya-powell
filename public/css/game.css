@@ -175,3 +175,19 @@
 }
 
 /* vim: set ts=2 sw=2 sts=2 noet filetype=css: */
+
+/* LAST ACTION */
+.seat-last-action {
+  font-size: 0.7rem;
+  color: #f0c040;
+  min-height: 1em;
+  text-align: center;
+}
+.seat-last-action.fade-out {
+  animation: actionFade 3s forwards;
+}
+@keyframes actionFade {
+  0%   { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}

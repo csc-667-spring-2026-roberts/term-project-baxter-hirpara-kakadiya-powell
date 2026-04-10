@@ -121,3 +121,22 @@ function layoutSeats(): void {
 }
 
 layoutSeats();
+
+// LAST ACTION
+function setLastAction(userId: string, action: string): void {
+  const seat = document.querySelector<HTMLElement>(`.seat[data-userid="${userId}"]`);
+  if (!seat) return;
+  const label = seat.querySelector<HTMLElement>(".seat-last-action");
+  if (!label) return;
+  label.textContent = action;
+  label.classList.remove("fade-out");
+  void label.offsetWidth; // reflow to restart animation
+  label.classList.add("fade-out");
+}
+
+// SSE
+const evtSource = new EventSource(`/api/games/${gameId}/events`);
+evtSource.addEventListener("last-action", (e: MessageEvent) => {
+  const data = JSON.parse(e.data) as { userId: string; action: string };
+  setLastAction(data.userId, data.action);
+});
