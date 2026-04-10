@@ -24,34 +24,33 @@ const router = Router();
 
 /**
  * List all available games.
+ *
+ * @note NO requireAuth, so that guests can spectate games from the lobby (but
+ * can't join)
  */
-router.get(
-  "/games",
-  requireAuth,
-  async (_req: Request<GameParams>, res: Response, next: NextFunction) => {
-    /**
-     * @note since this an api request, ${error_handling_policy - blank json?}
-     */
-    try {
-      // games
-      // xxx let's have find available take an optional search predicate to apply
-      // more query filters!
-      const games = await GameRepository.findAvailableAll();
-      if (!games) {
-        // not an error, just display an empty list
-        // xxx maybe we want to change the contract of findAvailableAll to just
-        // always return an empty list, if this is our common case
-      }
-
-      res.json({ games: games ?? [] });
-    } catch (err) {
-      // xxx do we want to do this? log THIS error, then clobber it and replace
-      // with bad response error
-      logger.error(String(err));
-      next(new ResponseError({ games: [] }, "failed to get games"));
+router.get("/games", async (_req: Request<GameParams>, res: Response, next: NextFunction) => {
+  /**
+   * @note since this an api request, ${error_handling_policy - blank json?}
+   */
+  try {
+    // games
+    // xxx let's have find available take an optional search predicate to apply
+    // more query filters!
+    const games = await GameRepository.findAvailableAll();
+    if (!games) {
+      // not an error, just display an empty list
+      // xxx maybe we want to change the contract of findAvailableAll to just
+      // always return an empty list, if this is our common case
     }
-  },
-);
+
+    res.json({ games: games ?? [] });
+  } catch (err) {
+    // xxx do we want to do this? log THIS error, then clobber it and replace
+    // with bad response error
+    logger.error(String(err));
+    next(new ResponseError({ games: [] }, "failed to get games"));
+  }
+});
 
 router.get(
   "/games/find",

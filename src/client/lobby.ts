@@ -42,6 +42,12 @@ function renderGameCard(game: Game): HTMLElement {
   (clone.querySelector("[data-game-status]") as HTMLElement).textContent = status;
 
   const joinForm = clone.querySelector("[data-join-form]") as HTMLFormElement;
+  // xxx do we want to show join button, then redirect to login without auth,
+  // or do we want to just show spectate? what's better ux?
+  // having a "Login to Join" button is probably the best ux, that
+  // way the user has a clear pathway on HOW TO join, but to keep things
+  // simpler, we'll just redirect a non-auth'd user to the login page when
+  // they hit this endpoint. it works, is simple, and the ux isn't horrible
   joinForm.action = `/api/games/${game.id}/join`;
 
   const spectateButton = clone.querySelector("[data-spectate-button]") as HTMLButtonElement;

@@ -15,11 +15,11 @@
 		<label for="b-all">All</label>
 		<% const blindsSeen = new Set(); %>
 		<% Object.values(locals.gameConfigs).forEach(cfg => { %>
-			<% const key = '$' + cfg.smallBlind + '/$' + cfg.bigBlind; %>
-			<% if (!blindsSeen.has(key)) { blindsSeen.add(key); %>
-				<input type="radio" name="blinds" id="b-<%= key %>" value="<%= key %>" data-small-blind="<%= cfg.smallBlind %>" data-big-blind="<%= cfg.bigBlind %>">
-				<label for="b-<%= key %>"><%= key %></label>
-			<% } %>
+		<% const key = '$' + cfg.smallBlind + '/$' + cfg.bigBlind; %>
+		<% if (!blindsSeen.has(key)) { blindsSeen.add(key); %>
+		<input type="radio" name="blinds" id="b-<%= key %>" value="<%= key %>" data-small-blind="<%= cfg.smallBlind %>" data-big-blind="<%= cfg.bigBlind %>">
+		<label for="b-<%= key %>"><%= key %></label>
+		<% } %>
 		<% }); %>
 	</div>
 
@@ -28,10 +28,10 @@
 		<label for="s-all">All</label>
 		<% const seatsSeen = new Set(); %>
 		<% Object.values(locals.gameConfigs).forEach(cfg => { %>
-			<% if (!seatsSeen.has(cfg.maxSeats)) { seatsSeen.add(cfg.maxSeats); %>
-				<input type="radio" name="seats" id="s-<%= cfg.maxSeats %>" value="<%= cfg.maxSeats %>-seat" data-max-seats="<%= cfg.maxSeats %>">
-				<label for="s-<%= cfg.maxSeats %>"><%= cfg.maxSeats %> seats</label>
-			<% } %>
+		<% if (!seatsSeen.has(cfg.maxSeats)) { seatsSeen.add(cfg.maxSeats); %>
+		<input type="radio" name="seats" id="s-<%= cfg.maxSeats %>" value="<%= cfg.maxSeats %>-seat" data-max-seats="<%= cfg.maxSeats %>">
+		<label for="s-<%= cfg.maxSeats %>"><%= cfg.maxSeats %> seats</label>
+		<% } %>
 		<% }); %>
 	</div>
 </div>
