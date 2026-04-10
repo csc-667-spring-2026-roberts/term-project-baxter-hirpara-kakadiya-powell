@@ -10,6 +10,18 @@
 import { gameStatus } from "../shared/env.js";
 import type { Game } from "../models/types.js";
 
+const src = new EventSource("/api/sse");
+
+src.onmessage = (ev) => {
+  const data = JSON.parse(ev.data);
+
+  if (data.type === "games_updated") {
+  }
+});
+
+src.onerror = (ev) => {
+});
+
 // global, so that we only call once on dom load - don't put in function to
 // constantly re-call. if we only need to do something on setup, then do it once
 // here
@@ -19,6 +31,19 @@ const filters = document.querySelector("#lobby-filters") as HTMLElement;
 
 let allGames: Game[] = [];
 let games: Game[] = [];
+
+async function joinGame(gameId: string): Promise<void> {
+  const resp = await fetch(`/api/games/${gameId}/join`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!resp.ok) {
+    console.error("failed to join game");
+  }
+}
 
 /**
  * @pre game is a valid, pre-validated object from the backend. we're not
