@@ -1,4 +1,14 @@
+/**
+ * @file sse.ts
+ * @author Tyler Baxter
+ * @date 2026-04-09
+ *
+ * Server-Sent Events: unidirectional server -> client push.
+ * Clients are scoped optionally by gameId for per-room broadcasts.
+ */
+
 import { Response } from "express";
+import logger from "./util/logger.js";
 
 interface Client {
   response: Response;
@@ -6,23 +16,38 @@ interface Client {
   gameId?: string;
 }
 
-const clients = new Map<string, Client>();
+const clients = new Map<number, Client>();
 let nextClientId = 0;
 
-function addClient(resp: Response, userId: string): string {
+export function addClient(response: Response, userId: string, gameId?: string): number {
   const id = nextClientId++;
 
-  resp.writeHead(200, {
+  response.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive"
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
   });
 
-  // xxx
-  resp.write("\n\n");
+  // kick the stream so the client's onopen fires immediately
+  response.write("\n\n");
+
+  clients.set(id, { response, userId, gameId });
+  logger.info(`sse: client ${id} connected (user=${userId}, game=${gameId ?? "lobby"})`);
+
+  response.on("close", () => removeClient(id));
+
+  return id;
 }
 
-function broadcast(data: object, pred?: (client: Client) => boolean): void {
+export function removeClient(id: number): void {
+  // xxx should we do more here?
+  if (clients.delete(id)) {
+    logger.info(`sse: client ${id} disconnected`);
+  }
+}
+
+export function broadcast(data: object, pred?: (client: Client) => boolean): void {
   if (!pred) {
     pred = () => true;
   }
