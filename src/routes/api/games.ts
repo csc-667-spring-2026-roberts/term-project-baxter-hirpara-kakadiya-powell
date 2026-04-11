@@ -16,6 +16,7 @@ import { Game } from "../../models/types.js";
 import { GAME_CONFIGS, GameStatus } from "../../shared/env.js";
 import { HttpError, ResponseError } from "../../util/error.js";
 import logger from "../../util/logger.js";
+import SSE from '../../sse.js';
 
 // xxx short-circuit to be simple
 const DEFAULT_BUYIN = 100;

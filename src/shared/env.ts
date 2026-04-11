@@ -6,6 +6,7 @@
  * Global constants and other TS environment variables.
  */
 
+import { Action } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmActions";
 import type { GameConfig } from "./types.js";
 
 // allowed query parameter commands, so users can't pass arbitrary commands
@@ -77,18 +78,60 @@ export enum CardLocation {
 }
 
 /** game action types */
-export enum Action {
-  DEAL_COMMUNITY = 0,
-  DEAL_HAND = 1,
-  BET = 2,
-  CALL = 3,
-  RAISE = 4,
-  CHECK = 5,
-  FOLD = 6,
-  ALL_IN = 7,
-  SHOWDOWN = 8,
-  PAYOUT = 9,
-}
+export const ActionEnum = {
+  GAME_STARTED: 0,
+  DEAL_COMMUNITY: 1,
+  DEAL_HAND: 2,
+  BET: 3,
+  CALL: 4,
+  RAISE: 5,
+  CHECK: 6,
+  FOLD: 7,
+  ALL_IN: 8,
+  SHOWDOWN: 9,
+  PAYOUT: 10,
+  GAME_ENDED: 11,
+  PLAYER_JOINED: 12,
+  PLAYER_LEFT: 13,
+} as const satisfies Record<string, number>;
+export type Action = (typeof ActionEnum)[keyof typeof ActionEnum];
+
+/*
+ * STATES OF POKER:
+ *  0 (tertiary). GameStatus.WAITING
+ *  1 (tertiary). GameStatus.PLAYING (game started)
+ *  2. community cards are dealt
+*   3. hands are dealt
+*   4. for each player...
+*     a. call, raise, check, fold, all_in
+*   5. community cards are dealt
+*   6. showdown, no-showdown (other player folded)
+*   7. payout (can occur after showdown or after no-showdown)
+*   8 (tertiary). GameStatus.ENDED (game ended)
+*   9 (tertiary). player_joined, player_left, player_paused
+*     * can't play until next turn
+*/
+export const ACTION_MAP: Record<Action, string> = {
+  [ActionEnum.GAME_STARTED]: "game_started",
+  [ActionEnum.DEAL_COMMUNITY]: "deal_community",
+  [ActionEnum.DEAL_HAND]: "deal_hand",
+  [ActionEnum.BET]: "bet",
+  [ActionEnum.CALL]: "call",
+  [ActionEnum.RAISE]: "raise",
+  [ActionEnum.CHECK]: "check",
+  [ActionEnum.FOLD]: "fold",
+  [ActionEnum.ALL_IN]: "all_in",
+  [ActionEnum.SHOWDOWN]: "showdown",
+  [ActionEnum.PAYOUT]: "payout",
+  [ActionEnum.GAME_ENDED]: "game_ended",
+  [ActionEnum.PLAYER_JOINED]: "player_joined",
+  [ActionEnum.PLAYER_LEFT]: "player_left",
+};
+
+const GamesEventEnum = {
+  GAMES_UPDATED: "games_updated",
+} as const satisfies Record<string, string>;
+export type GamesEvent = (typeof GamesEventEnum)[keyof typeof GamesEventEnum];
 
 /**
  * Valid blind configs for each GameConfig.
