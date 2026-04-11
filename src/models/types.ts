@@ -8,7 +8,7 @@
 
 // NOTE: frontend also uses these models for their data consumption - DO NOT put
 // server dependencies in the model types
-import { CardLocation } from "../shared/env.js";
+import { CardLocation, GameStatus, UserStatus } from "../shared/env.js";
 
 /**
  * Generic repository contract for base CRUD operations.
@@ -37,7 +37,7 @@ export interface User {
  */
 export interface Game {
   id: string;
-  status: number;
+  status: GameStatus;
   created_at: Date;
   ended_at: Date | null;
   updated_at: Date;
@@ -49,8 +49,15 @@ export interface Game {
   big_blind: number;
   last_raise_amount: number;
   deck_position: number;
-  // xxx new addition - should we track this?
-  player_count: number;
+  // xxx horrible bolt-on so lobby can have player_count, but this requires
+  // implicit knowledge that the query returns player_count. the correct
+  // solution long-term is have lobby/game types be different (e.g.,
+  // GameSummary, GameDetail (GameDetail also include GameUsers)), but for now
+  // this works to get the data flow going
+  player_count?: number;
+  // xxx probably type all these number types as Money types, and the like with
+  // constraints/validation to confirm they're money. same can apply to
+  // deck_position
 }
 
 /**
@@ -64,7 +71,7 @@ export interface GameUser {
   username: string;
   seat_no: number;
   balance: number;
-  status: number;
+  status: UserStatus;
   is_dealer: boolean;
   joined_at: Date | null;
 }
