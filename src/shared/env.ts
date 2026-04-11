@@ -18,6 +18,7 @@ export const DECK_SIZE: number = 52;
 
 export const MIN_SEATS: number = 6;
 export const MAX_SEATS: number = 9;
+export const MAX_MONEY: number = 1000.0;
 
 /** game status */
 export enum GameStatus {

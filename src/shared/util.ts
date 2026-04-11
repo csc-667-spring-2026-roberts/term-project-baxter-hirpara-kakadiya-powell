@@ -6,9 +6,10 @@
  * General utility.
  */
 
-import { DECK_SIZE, MIN_SEATS, MAX_SEATS, GAME_CONFIGS } from "../shared/env.js";
+import { DECK_SIZE, MIN_SEATS, MAX_SEATS, GAME_CONFIGS, MAX_MONEY } from "../shared/env.js";
 import crypto from "crypto";
-import { GameConfig } from "./types.js";
+import { GameConfig, Maybe } from "./types.js";
+import { GameStatus } from "../shared/env.js";
 
 /**
  * Validate that a deck position is within bounds of a deck.
@@ -52,6 +53,19 @@ export function validateGameConfig(cfg: GameConfig | null): boolean {
 }
 
 /**
+ * Validate that money-type amounts are valid money amounts.
+ *
+ * @param amts - The money-type amounts to validate
+ * @returns TRUE if valid, FALSE if invalid
+ */
+export function validateMoney(...amts: Maybe<number>[]): boolean {
+  return amts.every(
+    (n) =>
+      n == null || (Number.isFinite(n) && n >= 0 && Number(n.toFixed(2)) === n && n <= MAX_MONEY),
+  );
+}
+
+/**
  * Validate that seats are within MIN/MAX seat bounds.
  *
  * @param seats - The seats to validate
@@ -70,6 +84,16 @@ export function validateSeats(seats: number): boolean {
  */
 export function restoreBalance(_userId: string, _amount: number): boolean {
   return true;
+}
+
+/**
+ * Validate that a status is a valid GameStatus enum value.
+ *
+ * @param status - The status to validate
+ * @returns TRUE if valid, FALSE if invalid
+ */
+export function validateStatus(status: number): boolean {
+  return status in GameStatus;
 }
 
 /**

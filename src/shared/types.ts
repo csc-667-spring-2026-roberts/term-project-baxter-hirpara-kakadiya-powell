@@ -18,3 +18,5 @@ export type GameConfig = {
 export interface ActiveGame {
   id: string;
 }
+
+export type Maybe<T> = T | null | undefined;

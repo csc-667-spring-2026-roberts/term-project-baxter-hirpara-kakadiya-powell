@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unused-vars */
-// stub file, disable linting
+/* eslint-disable @typescript-eslint/require-await */
 /**
  * @file models/game.ts
  * @author Tyler Baxter, Kat Powell
@@ -11,141 +10,192 @@
 
 import db, { pgp } from "../db/connection.js";
 import logger from "../util/logger.js";
-import { validatePosition, restoreBalance } from "../shared/util.js";
-import { RollbackError } from "../util/error.js";
-import { DECK_SIZE, GameStatus, UserStatus, Action, CardLocation } from "../shared/env.js";
 import {
-  MOCK_USER,
-  MOCK_GAME,
-  MOCK_GAMES,
-  MOCK_GAME_USERS,
-  MOCK_GAME_ACTIONS,
-  MOCK_GAME_CARDS,
-} from "../mock.js";
+  validatePosition,
+  restoreBalance,
+  validateMoney,
+  validateGameConfig,
+  validateSeats,
+  validateBlinds,
+  validateStatus,
+} from "../shared/util.js";
+import { RollbackError } from "../util/error.js";
+import {
+  DECK_SIZE,
+  GameStatus,
+  UserStatus,
+  Action,
+  CardLocation,
+  gameStatus,
+} from "../shared/env.js";
+import { MOCK_GAME_ACTIONS } from "../mock.js";
 import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
-import { MIN_SEATS, MAX_SEATS } from "../env.js";
+import { GameConfig, Maybe } from "../shared/types.js";
 
 /**
  * Game repository.
- * @param id - The ID of the game
- * @returns The game if found, otherwise null
  */
 class GameRepository implements IRepository<Game> {
-
-  /** find a game by ID */
+  /**
+   * find a game by ID
+   * @param id - The ID of the game
+   * @returns The game if found, otherwise null
+   */
   async findById(id: string): Promise<Game | null> {
-  try {
-    const game = await db.oneOrNone(
-      "SELECT * FROM games WHERE id = $1",
-      [id]
-    );
-    return game ?? MOCK_GAME; // fallback to mock
-  } catch (err) {
-    logger.error("findById error:", err);
-    return MOCK_GAME; // fallback to mock
+    if (!id) {
+      logger.warn(`invalid game_id: ${id}`);
+      return null;
+    }
+
+    try {
+      return await db.oneOrNone("SELECT * FROM games WHERE id = $1", [id]);
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
+    }
   }
+
+  private validateDeadline(
+    turn_deadline_at: Maybe<Date>,
+    current_player_id: Maybe<string>,
+  ): boolean {
+    return (
+      (turn_deadline_at == null && current_player_id == null) ||
+      (turn_deadline_at != null && current_player_id != null)
+    );
   }
 
   /**
-  * create a new game
-  * @param _data - Partial game data used to create the game
-  * @returns A mock game object representing the created game
-  */
+   * create a new game
+   * @param _data - Partial game data used to create the game
+   * @returns A mock game object representing the created game
+   */
+  // eslint-disable-next-line complexity
   async create(data: Partial<Game>): Promise<Game | null> {
-    try {
-      const maxSeats = data.max_seats ?? 0;
-      if (maxSeats < MIN_SEATS || maxSeats > MAX_SEATS) {
-        logger.warn(`Invalid max_seats: ${maxSeats}. Must be between ${MIN_SEATS}-${MAX_SEATS}`);
-        return null;
-      }
-  
-      const position = data.position ?? 0;
-      const potAmount = data.pot_amount ?? 0;
-      if (position !== 0 || potAmount !== 0) {
-        logger.warn("New game cannot have non-zero position or pot_amount");
-        return null;
-      }
-  
-      const ALLOWED_BLINDS = [
-        { small: 1, big: 2 },
-        { small: 5, big: 10 },
-        { small: 10, big: 20 },
-      ];
-      const blindsValid = ALLOWED_BLINDS.some(
-        (b) => b.small === data.small_blind && b.big === data.big_blind
+    if (!data.big_blind || !data.small_blind || !data.max_seats) {
+      logger.warn(
+        "create game with invalid GameConfig: " + "missing: big_blind || small_blind || max_seats",
       );
-      if (!blindsValid) {
-        logger.warn(`Invalid blind combination: ${data.small_blind}/${data.big_blind}`);
-        return null;
-      }
-  
-      const bothNullOrBothNotNull =
-        (data.turn_deadline_at == null && data.current_player_id == null) ||
-        (data.turn_deadline_at != null && data.current_player_id != null);
-      if (!bothNullOrBothNotNull) {
-        logger.warn("turn_deadline_at and current_player_id must be both null or both set");
-        return null;
-      }
-  
-      const game = await db.one(
+      return null;
+    }
+
+    const cfg: GameConfig = {
+      smallBlind: data.small_blind,
+      bigBlind: data.big_blind,
+      maxSeats: data.max_seats,
+    };
+
+    if (!validateGameConfig(cfg)) {
+      logger.warn(`create game with invalid GameConfig: ${JSON.stringify(cfg)}`);
+      return null;
+    }
+
+    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+      logger.warn(
+        "create game with invalid money-types: " +
+          "small_blind || big_blind || pot_amount || last_raise_amount",
+      );
+      return null;
+    }
+
+    data.status = data.status ?? GameStatus.WAITING;
+    if (!validateStatus(data.status) || data.status !== GameStatus.WAITING) {
+      logger.warn(`create game with invalid status: ${gameStatus(data.status)}`);
+      return null;
+    }
+
+    data.pot_amount = data.pot_amount ?? 0;
+    data.last_raise_amount = data.last_raise_amount ?? 0;
+    if (data.pot_amount !== 0 || data.last_raise_amount !== 0) {
+      logger.warn(
+        "create game with invalid starting money-types (expect 0): " +
+          "pot_amount || last_raise_amount",
+      );
+      return null;
+    }
+
+    if (!this.validateDeadline(data.turn_deadline_at, data.current_player_id)) {
+      logger.warn("turn_deadline_at and current_player_id must be both null or both set");
+      return null;
+    }
+
+    data.deck_position = data.deck_position ?? 0;
+    if (data.deck_position !== 0) {
+      logger.warn("New game cannot have non-zero position");
+      return null;
+    }
+
+    try {
+      const game = await db.one<Game>(
         `INSERT INTO games
-         (status, max_seats, small_blind, big_blind, position, pot_amount, turn_deadline_at, current_player_id)
+         (status, max_seats, small_blind, big_blind, deck_position, pot_amount, turn_deadline_at, current_player_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
         [
-          data.status ?? GameStatus.WAITING,
-          maxSeats,
+          data.status,
+          data.max_seats,
           data.small_blind,
           data.big_blind,
-          position,
-          potAmount,
+          data.deck_position,
+          data.pot_amount,
           data.turn_deadline_at ?? null,
           data.current_player_id ?? null,
-        ]
+        ],
       );
-  
+
       return game;
     } catch (err) {
-      logger.error("create error:", err);
-      return null;
+      logger.error(String(err));
+      throw err;
     }
   }
 
   /**
-  * update a game by ID
-  * @param _id - The ID of the game to update
-  * @param _data - Partial game data containing fields to update
-  * @returns True if update was successful, otherwise false
-  */
+   * update a game by ID
+   * @param _id - The ID of the game to update
+   * @param _data - Partial game data containing fields to update
+   * @returns True if update was successful, otherwise false
+   */
   async update(id: string, data: Partial<Game>): Promise<boolean> {
+    if (!id) {
+      logger.warn(`invalid game_id: ${id}`);
+      return false;
+    }
+
+    // only validate fields that are provided:
+    if (data.max_seats != null && !validateSeats(data.max_seats)) {
+      logger.warn(`Invalid max_seats: ${String(data.max_seats)}`);
+      return false;
+    }
+
+    if (data.deck_position != null && !validatePosition(data.deck_position)) {
+      logger.warn(`Invalid position: ${String(data.deck_position)}`);
+      return false;
+    }
+
+    // validate any money-types are valid:
+    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+      logger.warn(
+        "update game with invalid money-types: " +
+          "small_blind || big_blind || pot_amount || last_raise_amount",
+      );
+      return false;
+    }
+
+    // Conditional fields check:
+    if (!this.validateDeadline(data.turn_deadline_at, data.current_player_id)) {
+      logger.warn("turn_deadline_at and current_player_id must be both null or both set");
+      return false;
+    }
+
     try {
-      // ----- Optional: only validate fields that are provided -----
-      if (data.max_seats && (data.max_seats < MIN_SEATS || data.max_seats > MAX_SEATS)) {
-        logger.warn(`Invalid max_seats: ${data.max_seats}`);
-        return false;
-      }
-
-      if (data.position != null && !validatePosition(data.position)) {
-        logger.warn(`Invalid position: ${data.position}`);
-        return false;
-      }
-
-      // Conditional fields check
-      if (
-        (data.turn_deadline_at != null && data.current_player_id == null) ||
-        (data.turn_deadline_at == null && data.current_player_id != null)
-      ) {
-        logger.warn("turn_deadline_at and current_player_id must be both null or both set");
-        return false;
-      }
-
       const res = await db.result(
         `UPDATE games SET
         status = COALESCE($1, status),
         max_seats = COALESCE($2, max_seats),
         small_blind = COALESCE($3, small_blind),
         big_blind = COALESCE($4, big_blind),
-        position = COALESCE($5, position),
+        deck_position = COALESCE($5, deck_position),
         pot_amount = COALESCE($6, pot_amount),
         turn_deadline_at = COALESCE($7, turn_deadline_at),
         current_player_id = COALESCE($8, current_player_id)
@@ -155,18 +205,24 @@ class GameRepository implements IRepository<Game> {
           data.max_seats,
           data.small_blind,
           data.big_blind,
-          data.position,
+          data.deck_position,
           data.pot_amount,
           data.turn_deadline_at,
           data.current_player_id,
           id,
-        ]
+        ],
       );
 
-      return res.rowCount > 0;
+      if (res.rowCount <= 0) {
+        logger.warn(`game with game_id (${id}) not found`);
+        return false;
+      }
+
+      logger.debug(`Success - Updated ${String(res.rowCount)} row(s)`);
+      return true;
     } catch (err) {
-      logger.error("update error:", err);
-      return false;
+      logger.error(String(err));
+      throw err;
     }
   }
 
@@ -178,84 +234,144 @@ class GameRepository implements IRepository<Game> {
    * @returns True if the deletion (including all related data) was successful, otherwise false
    */
   async delete(gameId: string): Promise<boolean> {
+    if (!gameId) {
+      logger.warn(`invalid game_id: ${gameId}`);
+      return false;
+    }
     try {
       return await db.tx(async (t) => {
         // delete game_actions
-        await t.none("DELETE FROM game_actions WHERE game_id = $1", [gameId]);
-
-        // delete game_cards
-        await t.none("DELETE FROM game_cards WHERE game_id = $1", [gameId]);
-
-        // delete game_users
-        await t.none("DELETE FROM game_users WHERE game_id = $1", [gameId]);
-
-        // delete the game itself
-        const res = await t.result("DELETE FROM games WHERE id = $1", [gameId]);
-        if (res.rowCount === 0) {
-          throw new Error(`Game with id ${gameId} not found`);
+        const actions = await t.result("DELETE FROM game_actions WHERE game_id = $1", [gameId]);
+        if (actions.rowCount <= 0) {
+          logger.warn(`no game_actions found for game_id: ${gameId}`);
+          throw new RollbackError();
         }
-
-        // if all succeeds, transaction commits automatically
+        // delete game_cards
+        const cards = await t.result("DELETE FROM game_cards WHERE game_id = $1", [gameId]);
+        if (cards.rowCount <= 0) {
+          logger.warn(`no game_cards found for game_id: ${gameId}`);
+          throw new RollbackError();
+        }
+        // delete game_users
+        const users = await t.result("DELETE FROM game_users WHERE game_id = $1", [gameId]);
+        if (users.rowCount <= 0) {
+          logger.warn(`no game_users found for game_id: ${gameId}`);
+          throw new RollbackError();
+        }
+        // delete the game itself
+        const game = await t.result("DELETE FROM games WHERE id = $1", [gameId]);
+        if (game.rowCount <= 0) {
+          logger.warn(`no game found for game_id: ${gameId}`);
+          throw new RollbackError();
+        }
+        // if all succeeds, transaction commits atomically
         return true;
       });
     } catch (err) {
-      logger.error("delete error:", err);
-      return false; // rollback happens automatically on error
+      if (err instanceof RollbackError) {
+        logger.warn(`DB rollback for game_id: ${gameId}`);
+        return false;
+      }
+      logger.error(String(err));
+      throw err;
     }
   }
 
   /**
    * Retrieves all games associated with a specific user.
    *
-   * @param _userId - The ID of the user
+   * @param userId - The ID of the user
    * @returns A list of mock games, or null if none found
    */
   async findByUserId(userId: string): Promise<Game[] | null> {
+    if (!userId) {
+      logger.warn(`invalid user_id: ${userId}`);
+      return null;
+    }
     try {
-      const games = await db.any(
-        `SELECT * FROM games
-         WHERE id IN (SELECT game_id FROM game_users WHERE user_id = $1)`,
-        [userId]
+      // sorts by status -> created_at DESC, so pending statusus bubble to the
+      // top
+      // xxx do we just want created_at to dominate though?
+      return await db.any(
+        `
+				SELECT g.*
+				FROM games g
+				JOIN game_users gu ON gu.game_id = g.id
+				WHERE gu.user_id = $1
+				ORDER BY status, g.created_at DESC`,
+        [userId],
       );
-      return games.length ? games : MOCK_GAMES; // fallback
-    } catch {
-      return MOCK_GAMES; // fallback
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
     }
   }
 
   /**
    * Find available games matching blind levels, sorted on index
    * IDX_games_status_created_at.
+   *
+   * @param smallBlind - small blind of GameConfig
+   * @param bigBlind - big blind of GameConfig
+   * @returns List of Games that match blinds of GameConfig (empty list if none
+   * found), or null if invalid config
    */
   async findAvailableBlind(smallBlind: number, bigBlind: number): Promise<Game[] | null> {
-    try {
-      const games = await db.any(
-        `SELECT *
-         FROM games
-         WHERE status = 'waiting'
-           AND small_blind = $1
-           AND big_blind = $2
-         ORDER BY created_at ASC`,
-        [smallBlind, bigBlind]
-      );
-      return games.length ? games : null;
-    } catch (err) {
-      logger.error("findAvailableBlind error:", err);
+    if (!validateBlinds(smallBlind, bigBlind)) {
+      logger.warn(`invalid blinds (SB: ${String(smallBlind)}, BB: ${String(bigBlind)}) for find`);
       return null;
+    }
+
+    try {
+      // xxx do we want want to sort ASC, or provide a predicate for sort?
+      // order by status first (recall: WAITING = 0, PLAYING = 1, ...) which
+      // will push pending games to the top, then order by created_at ASC to
+      // find oldest games for players to join
+      const games = await db.any<Game>(
+        `
+				SELECT g.*, COUNT(gu.user_id) AS player_count
+				FROM games g
+				LEFT JOIN game_users gu ON gu.game_id = g.id
+				WHERE g.small_blind = $1
+					AND g.big_blind = $2
+					AND g.status != $3
+				GROUP BY g.id
+				HAVING COUNT(gu.user_id) < g.max_seats
+				ORDER BY status, created_at ASC`,
+        [smallBlind, bigBlind, GameStatus.ENDED],
+      );
+      return games;
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
     }
   }
 
   /**
    * Find all available games, sorted on index IDX_games_status_created_at.
+   *
+   * @returns List of Games that match blinds of GameConfig (empty list if none
+   * found), or null if invalid.
    */
   async findAvailableAll(): Promise<Game[] | null> {
     try {
-      const games = await db.any(
-        `SELECT * FROM games WHERE status = 'waiting' ORDER BY created_at ASC`
+      // order by status first (recall: WAITING = 0, PLAYING = 1, ...) which
+      // will push pending games to the top, then order by created_at ASC to
+      // find oldest games for players to join
+      return await db.any<Game>(
+        `
+				SELECT g.*, COUNT(gu.user_id) AS player_count
+				FROM games g
+				LEFT JOIN game_users gu ON gu.game_id = g.id
+				WHERE g.status != $1
+				GROUP BY g.id
+				HAVING COUNT(gu.user_id) < g.max_seats
+        ORDER BY status, created_at ASC`,
+        [GameStatus.ENDED],
       );
-      return games.length ? games : MOCK_GAMES; // fallback
-    } catch {
-      return MOCK_GAMES; // fallback
+    } catch (err) {
+      logger.error(String(err));
+      throw err;
     }
   }
 
@@ -281,16 +397,16 @@ class GameRepository implements IRepository<Game> {
 
     try {
       return await db.tx(async (t) => {
-        const game = await t.oneOrNone("SELECT id FROM games WHERE id = $1 AND status = $2", [
-          gameId,
-          GameStatus.WAITING,
-        ]);
+        const game = await t.oneOrNone<{ id: string }>(
+          "SELECT id FROM games WHERE id = $1 AND status = $2",
+          [gameId, GameStatus.WAITING],
+        );
         if (!game) {
           logger.warn(`game (${gameId}) not found or not in WAITING status`);
           throw new RollbackError();
         }
 
-        const existing = await t.oneOrNone(
+        const existing = await t.oneOrNone<{ user_id: string }>(
           "SELECT user_id FROM game_users WHERE game_id = $1 AND user_id = $2",
           [gameId, userId],
         );
@@ -299,7 +415,7 @@ class GameRepository implements IRepository<Game> {
           throw new RollbackError();
         }
 
-        const seatTaken = await t.oneOrNone(
+        const seatTaken = await t.oneOrNone<{ seat_no: number }>(
           "SELECT seat_no FROM game_users WHERE game_id = $1 AND seat_no = $2",
           [gameId, seatNo],
         );
