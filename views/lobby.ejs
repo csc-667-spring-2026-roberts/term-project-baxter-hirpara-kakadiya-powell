@@ -4,9 +4,10 @@
 <h2>Lobby</h2>
 
 <div id="lobby-buttons">
-	<button id="create-game-button">Create Game</button>
-	<!-- dialog modal for create-game-button -->
-	<%- include('partials/create-game-dialog') %>
+	<% if (locals.user) { %>
+		<button id="create-game-button">Create Game</button>
+		<%- include('partials/create-game-dialog') %>
+	<% } %>
 </div>
 
 <div id="lobby-filters">

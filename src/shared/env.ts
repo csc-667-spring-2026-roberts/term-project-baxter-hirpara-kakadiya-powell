@@ -128,7 +128,7 @@ export const ACTION_MAP: Record<Action, string> = {
   [ActionEnum.PLAYER_LEFT]: "player_left",
 };
 
-const GamesEventEnum = {
+export const GamesEventEnum = {
   GAMES_UPDATED: "games_updated",
 } as const satisfies Record<string, string>;
 export type GamesEvent = (typeof GamesEventEnum)[keyof typeof GamesEventEnum];

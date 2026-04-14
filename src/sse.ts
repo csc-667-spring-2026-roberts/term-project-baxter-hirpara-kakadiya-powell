@@ -17,6 +17,7 @@ interface Client {
 }
 
 const clients = new Map<number, Client>();
+// integer rollover 64-bit is unfeasible
 let nextClientId = 0;
 
 export function addClient(response: Response, userId: string, gameId?: string): number {

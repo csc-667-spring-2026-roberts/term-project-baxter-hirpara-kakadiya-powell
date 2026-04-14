@@ -2,14 +2,29 @@
 
 <dialog id="create-game-dialog">
 	<h3>Create Game</h3>
-	<form action="/api/games/create" method="POST">
-		<label for="create-config">Config</label>
-		<select name="config" id="create-config">
-			<% Object.entries(locals.gameConfigs).forEach(([key, cfg]) => { %>
-			<option value="<%= key %>"><%= cfg.smallBlind %>/<%= cfg.bigBlind %> blinds, <%= cfg.maxSeats %> seats</option>
+	<div>
+		<div class="segment">
+			<% const createBlindsSeen = new Set(); %>
+			<% Object.values(locals.gameConfigs).forEach(cfg => { %>
+				<% const key = cfg.smallBlind + '/' + cfg.bigBlind; %>
+				<% if (!createBlindsSeen.has(key)) { createBlindsSeen.add(key); %>
+					<input type="radio" name="blinds" id="cb-<%= key %>" value="<%= key %>" required <%= createBlindsSeen.size === 1 ? 'checked' : '' %>>
+					<label for="cb-<%= key %>">$<%= cfg.smallBlind %>/$<%= cfg.bigBlind %></label>
+				<% } %>
 			<% }); %>
-		</select>
-		<button id="create-game-submit" type="submit">Create</button>
-	</form>
+		</div>
+
+		<div class="segment">
+			<% const createSeatsSeen = new Set(); %>
+			<% Object.values(locals.gameConfigs).forEach(cfg => { %>
+				<% if (!createSeatsSeen.has(cfg.maxSeats)) { createSeatsSeen.add(cfg.maxSeats); %>
+					<input type="radio" name="seats" id="cs-<%= cfg.maxSeats %>" value="<%= cfg.maxSeats %>" required <%= createSeatsSeen.size === 1 ? 'checked' : '' %>>
+					<label for="cs-<%= cfg.maxSeats %>"><%= cfg.maxSeats %> seats</label>
+				<% } %>
+			<% }); %>
+		</div>
+
+		<button id="create-game-submit" type="button">Create</button>
+	</div>
 	<button id="create-game-cancel">Cancel</button>
 </dialog>
