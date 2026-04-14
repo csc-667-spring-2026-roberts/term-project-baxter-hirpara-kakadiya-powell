@@ -7,19 +7,35 @@
  * Create game form is a standard POST (handled by EJS partial).
  */
 
-import { gameStatus } from "../shared/env.js";
+import { gameStatus, GamesEventEnum } from "../shared/env.js";
 import type { Game } from "../models/types.js";
 
-const src = new EventSource("/api/sse");
+// SSE: lobby-wide events (game list updates)
+function connectSSE(url: string, onMessage: (ev: MessageEvent) => void): void {
+  let src = new EventSource(url);
 
-src.onmessage = (ev) => {
-  const data = JSON.parse(ev.data);
+  const attach = (s: EventSource): void => {
+    s.onmessage = onMessage;
+    s.onerror = () => {
+      if (s.readyState === EventSource.CLOSED) {
+        setTimeout(() => {
+          src = new EventSource(url);
+          attach(src);
+        }, 2000);
+      }
+    };
+  };
 
-  if (data.type === "games_updated") {
+  attach(src);
+}
+
+connectSSE("/api/lobby/sse", (ev) => {
+  const data = JSON.parse(ev.data) as { type: string; games?: Game[] };
+
+  if (data.type === GamesEventEnum.GAMES_UPDATED && data.games) {
+    allGames = data.games;
+    filter();
   }
-});
-
-src.onerror = (ev) => {
 });
 
 // global, so that we only call once on dom load - don't put in function to
@@ -143,3 +159,40 @@ function loadGames(): void {
 
 document.addEventListener("DOMContentLoaded", loadGames);
 filters.addEventListener("change", filter);
+
+// create game: fetch create, then POST to join via dynamic form
+const createDialog = document.querySelector<HTMLDialogElement>("#create-game-dialog");
+const createSubmit = document.querySelector<HTMLButtonElement>("#create-game-submit");
+
+if (createDialog && createSubmit) {
+  createSubmit.addEventListener("click", () => {
+    const blindsEl = createDialog.querySelector<HTMLInputElement>('input[name="blinds"]:checked');
+    const seatsEl = createDialog.querySelector<HTMLInputElement>('input[name="seats"]:checked');
+    if (!blindsEl || !seatsEl) return;
+
+    fetch("/api/games/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blinds: blindsEl.value, seats: seatsEl.value }),
+    })
+      .then((res) => {
+        if (res.status === 401) {
+          window.location.href = "/login";
+          throw new Error("not authenticated");
+        }
+        if (!res.ok) throw new Error("create failed");
+        return res.json() as Promise<{ game: { id: string } }>;
+      })
+      .then((data) => {
+        // POST to join via dynamic form — server handles redirect
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = `/api/games/${data.game.id}/join`;
+        document.body.appendChild(form);
+        form.submit();
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to create game:", err);
+      });
+  });
+}

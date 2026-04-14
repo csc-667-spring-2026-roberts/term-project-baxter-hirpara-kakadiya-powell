@@ -56,13 +56,11 @@ if (findGameButton && findGameDialog) {
 
 if (findGameSubmit && findGameResult) {
   findGameSubmit.addEventListener("click", () => {
-    const select = document.getElementById("find-config") as HTMLSelectElement | null;
-    if (!select) return;
-    const opt = select.selectedOptions[0];
-    if (!opt) return;
+    const blindsEl = findGameDialog?.querySelector<HTMLInputElement>('input[name="find-blinds"]:checked');
+    if (!blindsEl) return;
 
-    const sm = opt.dataset.smallBlind ?? "";
-    const big = opt.dataset.bigBlind ?? "";
+    const sm = blindsEl.dataset.smallBlind ?? "";
+    const big = blindsEl.dataset.bigBlind ?? "";
 
     findGameResult.textContent = "Searching...";
 
