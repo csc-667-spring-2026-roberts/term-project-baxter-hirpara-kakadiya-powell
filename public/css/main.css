@@ -193,4 +193,47 @@ header > :last-child {
   font-size: 0.5rem;
 }
 
+/* CHAT MESSAGES */
+.chat-message {
+  padding: 0.35rem 0.4rem;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
+}
+.chat-message:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.chat-message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+}
+.chat-message-username {
+  color: #e94560;
+  font-size: 0.72rem;
+  font-weight: bold;
+}
+.chat-message-time {
+  color: #555;
+  font-size: 0.62rem;
+}
+.chat-message-body {
+  color: #ccc;
+  font-size: 0.72rem;
+  margin: 0;
+  word-break: break-word;
+}
+#chat-input {
+  width: 100%;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  outline: none;
+}
+#chat-input:focus {
+  border-color: #e94560;
+}
 /* vim: set ts=2 sw=2 sts=2 noet filetype=css: */

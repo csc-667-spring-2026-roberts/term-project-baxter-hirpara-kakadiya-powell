@@ -13,16 +13,25 @@ const chatPopout = document.getElementById("chat-popout");
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form") as HTMLFormElement | null;
 
-function appendMessage(username: string, body: string): void {
+function appendMessage(username: string, body: string, createdAt?: string): void {
   const div = document.createElement("div");
-  const strong = document.createElement("strong");
-
   div.className = "chat-message";
-  strong.textContent = `${username}: `;
-
-  div.appendChild(strong);
-  div.appendChild(document.createTextNode(body));
-
+  const meta = document.createElement("div");
+  meta.className = "chat-message-meta";
+  const strong = document.createElement("strong");
+  strong.className = "chat-message-username";
+  strong.textContent = username;
+  const time = document.createElement("span");
+  time.className = "chat-message-time";
+  const date = createdAt ? new Date(createdAt) : new Date();
+  time.textContent = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  meta.appendChild(strong);
+  meta.appendChild(time);
+  const text = document.createElement("p");
+  text.className = "chat-message-body";
+  text.textContent = body;
+  div.appendChild(meta);
+  div.appendChild(text);
   if (chatMessages) {
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -56,7 +65,7 @@ if (chatButton) {
           return;
         }
         msgs.forEach((msg) => {
-          appendMessage(msg.username, msg.body);
+          appendMessage(msg.username, msg.body, String(msg.created_at));
         });
       });
   }
