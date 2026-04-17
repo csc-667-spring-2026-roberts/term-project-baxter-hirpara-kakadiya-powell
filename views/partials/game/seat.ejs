@@ -12,8 +12,15 @@
         <%- include('../avatar', { user: seatPlayer, size: 'sm' }) %>
         <p class="seat-username"><%= seatPlayer.username %></p>
         <p class="seat-balance money">$<%= seatPlayer.balance %></p>
+        <div class="seat-hover-info">
+            <p>Balance: $<%= seatPlayer.balance %></p>
+            <p>Seat: <%= seatNo %></p>
+        </div>
         <% } else { %>
         <span class="seat-username">Empty</span>
+        <% if (locals.user) { %>
+        <span class="seat-join-hint">Click to join</span>
+        <% } %>
         <% } %>
     </div>
     <% if (seatPlayer && seatPlayer.is_dealer) { %>
