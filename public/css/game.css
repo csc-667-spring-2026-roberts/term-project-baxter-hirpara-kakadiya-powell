@@ -187,7 +187,13 @@
   animation: actionFade 3s forwards;
 }
 @keyframes actionFade {
-  0%   { opacity: 1; }
-  60%  { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
