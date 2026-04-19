@@ -13,7 +13,13 @@ import { shuffleDeck } from "../../shared/util.js";
 import { GameParams, TypedRequest } from "../../types.js";
 import { GameConfig } from "../../shared/types.js";
 import { Game } from "../../models/types.js";
-import { GAME_CONFIGS, GameStatus, GamesEventEnum, ACTION_MAP, ActionEnum } from "../../shared/env.js";
+import {
+  GAME_CONFIGS,
+  GameStatus,
+  GamesEventEnum,
+  ACTION_MAP,
+  ActionEnum,
+} from "../../shared/env.js";
 import { HttpError, ResponseError } from "../../util/error.js";
 import logger from "../../util/logger.js";
 import { broadcast, addClient } from "../../sse.js";
@@ -29,7 +35,7 @@ const router = Router();
  * @note NO requireAuth, so that guests can spectate games from the lobby (but
  * can't join)
  */
-router.get("/games", async (_req: Request<GameParams>, res: Response, next: NextFunction) => {
+router.get("/games", async (req: Request<GameParams>, res: Response, next: NextFunction) => {
   /**
    * @note since this an api request, ${error_handling_policy - blank json?}
    */
@@ -37,7 +43,7 @@ router.get("/games", async (_req: Request<GameParams>, res: Response, next: Next
     // games
     // xxx let's have find available take an optional search predicate to apply
     // more query filters!
-    const games = await GameRepository.findAvailableAll(req.session.userId ?? null);
+    const games = await GameRepository.findAvailableAll(req.session.userId);
     if (!games) {
       // not an error, just display an empty list
       // xxx maybe we want to change the contract of findAvailableAll to just
@@ -91,7 +97,11 @@ router.get(
 router.post(
   "/games/create",
   requireAuth,
-  async (req: TypedRequest<{ blinds: string; seats: string }>, res: Response, next: NextFunction) => {
+  async (
+    req: TypedRequest<{ blinds: string; seats: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     const { blinds, seats } = req.body;
     let cfg: GameConfig | null = null;
 

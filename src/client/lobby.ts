@@ -11,12 +11,12 @@ import { gameStatus, GamesEventEnum } from "../shared/env.js";
 import type { Game } from "../models/types.js";
 
 // SSE: lobby-wide events (game list updates)
-function connectSSE(url: string, onMessage: (ev: MessageEvent) => void): void {
+function connectSSE(url: string, onMessage: (ev: MessageEvent<string>) => void): void {
   let src = new EventSource(url);
 
   const attach = (s: EventSource): void => {
     s.onmessage = onMessage;
-    s.onerror = () => {
+    s.onerror = (): void => {
       if (s.readyState === EventSource.CLOSED) {
         setTimeout(() => {
           src = new EventSource(url);
@@ -41,25 +41,36 @@ connectSSE("/api/lobby/sse", (ev) => {
 // global, so that we only call once on dom load - don't put in function to
 // constantly re-call. if we only need to do something on setup, then do it once
 // here
-const gamesList = document.querySelector("#games-list") as HTMLDivElement;
-const gameCardTemplate = document.querySelector("#game-card-template") as HTMLTemplateElement;
-const filters = document.querySelector("#lobby-filters") as HTMLElement;
+const gamesList = document.querySelector<HTMLDivElement>("#games-list");
+if (!gamesList) {
+  throw new Error("missing #games-list");
+}
+const gameCardTemplate = document.querySelector<HTMLTemplateElement>("#game-card-template");
+if (!gameCardTemplate) {
+  throw new Error("missing #game-card-template");
+}
+const filters = document.querySelector<HTMLElement>("#lobby-filters");
+if (!filters) {
+  throw new Error("missing #lobby-filters");
+}
 
 let allGames: Game[] = [];
 let games: Game[] = [];
 
-async function joinGame(gameId: string): Promise<void> {
+/* xxx unused
+async function _joinGame(gameId: string): Promise<void> {
   const resp = await fetch(`/api/games/${gameId}/join`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
 
   if (!resp.ok) {
     console.error("failed to join game");
   }
 }
+*/
 
 /**
  * @pre game is a valid, pre-validated object from the backend. we're not
@@ -67,6 +78,10 @@ async function joinGame(gameId: string): Promise<void> {
  */
 function renderGameCard(game: Game): HTMLElement {
   const clone = gameCardTemplate.content.cloneNode(true) as DocumentFragment;
+  const card = clone.firstElementChild;
+  if (!(card instanceof HTMLElement)) {
+    throw new Error("empty game card template");
+  }
 
   const player_count = String(game.player_count);
   const max_seats = String(game.max_seats);
@@ -78,25 +93,38 @@ function renderGameCard(game: Game): HTMLElement {
   const playersText = `${player_count}/${max_seats} seats`;
   const blindsText = `$${smallBlind}/$${bigBlind}`;
 
-  (clone.querySelector("[data-game-players]") as HTMLElement).textContent = playersText;
-  (clone.querySelector("[data-game-blinds]") as HTMLElement).textContent = blindsText;
-  (clone.querySelector("[data-game-status]") as HTMLElement).textContent = status;
+  const playersEl = card.querySelector<HTMLElement>("[data-game-players]");
+  if (playersEl) {
+    playersEl.textContent = playersText;
+  }
+  const blindsEl = card.querySelector<HTMLElement>("[data-game-blinds]");
+  if (blindsEl) {
+    blindsEl.textContent = blindsText;
+  }
+  const statusEl = card.querySelector<HTMLElement>("[data-game-status]");
+  if (statusEl) {
+    statusEl.textContent = status;
+  }
 
-  const joinForm = clone.querySelector("[data-join-form]") as HTMLFormElement;
   // xxx do we want to show join button, then redirect to login without auth,
   // or do we want to just show spectate? what's better ux?
   // having a "Login to Join" button is probably the best ux, that
   // way the user has a clear pathway on HOW TO join, but to keep things
   // simpler, we'll just redirect a non-auth'd user to the login page when
   // they hit this endpoint. it works, is simple, and the ux isn't horrible
-  joinForm.action = `/api/games/${game.id}/join`;
+  const joinForm = card.querySelector<HTMLFormElement>("[data-join-form]");
+  if (joinForm) {
+    joinForm.action = `/api/games/${game.id}/join`;
+  }
 
-  const spectateButton = clone.querySelector("[data-spectate-button]") as HTMLButtonElement;
-  spectateButton.addEventListener("click", () => {
-    window.location.href = `/game/${game.id}`;
-  });
+  const spectateButton = card.querySelector<HTMLButtonElement>("[data-spectate-button]");
+  if (spectateButton) {
+    spectateButton.addEventListener("click", () => {
+      window.location.href = `/game/${game.id}`;
+    });
+  }
 
-  return clone.firstElementChild as HTMLElement;
+  return card;
 }
 
 /**

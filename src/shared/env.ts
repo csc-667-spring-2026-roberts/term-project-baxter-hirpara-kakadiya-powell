@@ -101,16 +101,16 @@ export type Action = (typeof ActionEnum)[keyof typeof ActionEnum];
  *  0 (tertiary). GameStatus.WAITING
  *  1 (tertiary). GameStatus.PLAYING (game started)
  *  2. community cards are dealt
-*   3. hands are dealt
-*   4. for each player...
-*     a. call, raise, check, fold, all_in
-*   5. community cards are dealt
-*   6. showdown, no-showdown (other player folded)
-*   7. payout (can occur after showdown or after no-showdown)
-*   8 (tertiary). GameStatus.ENDED (game ended)
-*   9 (tertiary). player_joined, player_left, player_paused
-*     * can't play until next turn
-*/
+ *   3. hands are dealt
+ *   4. for each player...
+ *     a. call, raise, check, fold, all_in
+ *   5. community cards are dealt
+ *   6. showdown, no-showdown (other player folded)
+ *   7. payout (can occur after showdown or after no-showdown)
+ *   8 (tertiary). GameStatus.ENDED (game ended)
+ *   9 (tertiary). player_joined, player_left, player_paused
+ *     * can't play until next turn
+ */
 export const ACTION_MAP: Record<Action, string> = {
   [ActionEnum.GAME_STARTED]: "game_started",
   [ActionEnum.DEAL_COMMUNITY]: "deal_community",

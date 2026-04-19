@@ -56,7 +56,9 @@ if (findGameButton && findGameDialog) {
 
 if (findGameSubmit && findGameResult) {
   findGameSubmit.addEventListener("click", () => {
-    const blindsEl = findGameDialog?.querySelector<HTMLInputElement>('input[name="find-blinds"]:checked');
+    const blindsEl = findGameDialog?.querySelector<HTMLInputElement>(
+      'input[name="find-blinds"]:checked',
+    );
     if (!blindsEl) return;
 
     const sm = blindsEl.dataset.smallBlind ?? "";

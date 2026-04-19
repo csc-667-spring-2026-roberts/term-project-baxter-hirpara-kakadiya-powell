@@ -59,10 +59,7 @@ export function validateGameConfig(cfg: GameConfig | null): boolean {
  * @returns TRUE if valid, FALSE if invalid
  */
 export function validateMoney(...amts: Maybe<number>[]): boolean {
-  return amts.every(
-    (n) =>
-      n == null || (Number.isFinite(n) && n >= 0 && n <= MAX_MONEY),
-  );
+  return amts.every((n) => n == null || (Number.isFinite(n) && n >= 0 && n <= MAX_MONEY));
 }
 
 /**

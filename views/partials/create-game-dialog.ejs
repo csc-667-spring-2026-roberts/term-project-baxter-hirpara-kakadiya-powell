@@ -6,21 +6,21 @@
 		<div class="segment">
 			<% const createBlindsSeen = new Set(); %>
 			<% Object.values(locals.gameConfigs).forEach(cfg => { %>
-				<% const key = cfg.smallBlind + '/' + cfg.bigBlind; %>
-				<% if (!createBlindsSeen.has(key)) { createBlindsSeen.add(key); %>
-					<input type="radio" name="blinds" id="cb-<%= key %>" value="<%= key %>" required <%= createBlindsSeen.size === 1 ? 'checked' : '' %>>
-					<label for="cb-<%= key %>">$<%= cfg.smallBlind %>/$<%= cfg.bigBlind %></label>
-				<% } %>
+			<% const key = cfg.smallBlind + '/' + cfg.bigBlind; %>
+			<% if (!createBlindsSeen.has(key)) { createBlindsSeen.add(key); %>
+			<input type="radio" name="blinds" id="cb-<%= key %>" value="<%= key %>" required <%= createBlindsSeen.size === 1 ? 'checked' : '' %>>
+			<label for="cb-<%= key %>">$<%= cfg.smallBlind %>/$<%= cfg.bigBlind %></label>
+			<% } %>
 			<% }); %>
 		</div>
 
 		<div class="segment">
 			<% const createSeatsSeen = new Set(); %>
 			<% Object.values(locals.gameConfigs).forEach(cfg => { %>
-				<% if (!createSeatsSeen.has(cfg.maxSeats)) { createSeatsSeen.add(cfg.maxSeats); %>
-					<input type="radio" name="seats" id="cs-<%= cfg.maxSeats %>" value="<%= cfg.maxSeats %>" required <%= createSeatsSeen.size === 1 ? 'checked' : '' %>>
-					<label for="cs-<%= cfg.maxSeats %>"><%= cfg.maxSeats %> seats</label>
-				<% } %>
+			<% if (!createSeatsSeen.has(cfg.maxSeats)) { createSeatsSeen.add(cfg.maxSeats); %>
+			<input type="radio" name="seats" id="cs-<%= cfg.maxSeats %>" value="<%= cfg.maxSeats %>" required <%= createSeatsSeen.size === 1 ? 'checked' : '' %>>
+			<label for="cs-<%= cfg.maxSeats %>"><%= cfg.maxSeats %> seats</label>
+			<% } %>
 			<% }); %>
 		</div>
 

@@ -26,7 +26,7 @@ export function addClient(response: Response, userId: string, gameId?: string): 
   response.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
+    Connection: "keep-alive",
     "X-Accel-Buffering": "no",
   });
 
@@ -34,9 +34,9 @@ export function addClient(response: Response, userId: string, gameId?: string): 
   response.write("\n\n");
 
   clients.set(id, { response, userId, gameId });
-  logger.info(`sse: client ${id} connected (user=${userId}, game=${gameId ?? "lobby"})`);
+  logger.info(`sse: client ${String(id)} connected (user=${userId}, game=${gameId ?? "lobby"})`);
 
-  response.on("close", () => removeClient(id));
+  response.on("close", () => { removeClient(id); });
 
   return id;
 }
@@ -44,13 +44,13 @@ export function addClient(response: Response, userId: string, gameId?: string): 
 export function removeClient(id: number): void {
   // xxx should we do more here?
   if (clients.delete(id)) {
-    logger.info(`sse: client ${id} disconnected`);
+    logger.info(`sse: client ${String(id)} disconnected`);
   }
 }
 
 export function broadcast(data: object, pred?: (client: Client) => boolean): void {
   if (!pred) {
-    pred = () => true;
+    pred = (): boolean => true;
   }
 
   const msg = `data: ${JSON.stringify(data)}\n\n`;
