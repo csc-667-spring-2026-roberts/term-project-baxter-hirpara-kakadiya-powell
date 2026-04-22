@@ -1,6 +1,27 @@
 <%# partials/game/seat.ejs - Player seat %>
+<%# Calculate SB and BB positions (new) %>
+<%
+const dealerSeat = locals.players
+  ? locals.players.find(p => p.is_dealer)?.seat_no
+  : null;
+
+const maxSeats = game && game.max_seats ? game.max_seats : 0;
+
+const sbSeat = dealerSeat !== null ? (dealerSeat + 1) % maxSeats : null;
+const bbSeat = dealerSeat !== null ? (dealerSeat + 2) % maxSeats : null;
+%>
 <% var seatPlayer = locals.players ? locals.players.find(p => p.seat_no === seatNo ) : null %>
 <div class="seat seat-<%= seatNo %>" id="seat-<%= seatNo %>" data-seat="<%= seatNo %>" data-userid="<%= seatPlayer ? seatPlayer.user_id : '' %>">
+    <!-- SB indicator (new) -->
+    <% if (sbSeat !== null && seatNo === sbSeat) { %>
+        <div class="seat-sb">(SB)</div>
+    <% } %>
+
+    <!-- BB indicator (new) -->
+    <% if (bbSeat !== null && seatNo === bbSeat) { %>
+        <div class="seat-bb">(BB)</div>
+    <% } %>
+    
     <div class="seat-cards">
         <% if (seatPlayer) { %>
         <div class="card-slot" data-card-back></div>
