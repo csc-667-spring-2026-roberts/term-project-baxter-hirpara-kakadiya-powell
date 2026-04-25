@@ -128,8 +128,8 @@ class GameRepository implements IRepository<Game> {
     try {
       const game = await db.one<Game>(
         `INSERT INTO games
-         (status, max_seats, small_blind, big_blind, deck_position, pot_amount, turn_deadline_at, current_player_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (id, status, max_seats, small_blind, big_blind, deck_position, pot_amount, turn_deadline_at, current_player_id)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
         [
           data.status,
