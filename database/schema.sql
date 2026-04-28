@@ -28,7 +28,6 @@ CREATE TABLE games(
 	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 	ended_at TIMESTAMPTZ,
 	updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-	pot_amount decimal(12, 2) NOT NULL DEFAULT 0,
 	turn_deadline_at TIMESTAMPTZ,
 	current_player_id UUID REFERENCES users(id),
 	max_seats INT NOT NULL,
@@ -39,6 +38,26 @@ CREATE TABLE games(
 );
 
 CREATE INDEX "IDX_games_status_created_at" ON games(status, created_at);
+
+CREATE TABLE game_pot(
+	game_id UUID NOT NULL REFERENCES games(id),
+	-- there will never be more than 2^15 pots per game
+	pot_num SMALLINT NOT NULL,
+	PRIMARY KEY (game_id, pot_num),
+	-- total amount of ALL users to this pot
+	amount decimal(12, 2) NOT NULL DEFAULT 0
+);
+
+-- join table of eligible users for each pot of a game
+CREATE TABLE game_pot_users(
+	user_id UUID NOT NULL REFERENCES users(id),
+	game_id UUID NOT NULL,
+	pot_num SMALLINT NOT NULL,
+	PRIMARY KEY (game_id, pot_num, user_id),
+	-- amount THIS user has contributed to pot
+	amount decimal(12, 2) NOT NULL,
+	FOREIGN KEY (game_id, pot_num) REFERENCES game_pot(game_id, pot_num)
+);
 
 CREATE TABLE game_users(
 	game_id UUID NOT NULL REFERENCES games(id),
@@ -54,6 +73,7 @@ CREATE TABLE game_users(
 	status SMALLINT NOT NULL CHECK (status BETWEEN 0 AND 2),
 	is_dealer BOOLEAN NOT NULL,
 	joined_at TIMESTAMPTZ,
+	last_bet decimal(12, 2) NOT NULL,
 	PRIMARY KEY (game_id, user_id)
 );
 

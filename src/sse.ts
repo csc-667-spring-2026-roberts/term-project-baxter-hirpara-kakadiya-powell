@@ -36,7 +36,9 @@ export function addClient(response: Response, userId: string, gameId?: string): 
   clients.set(id, { response, userId, gameId });
   logger.info(`sse: client ${String(id)} connected (user=${userId}, game=${gameId ?? "lobby"})`);
 
-  response.on("close", () => { removeClient(id); });
+  response.on("close", () => {
+    removeClient(id);
+  });
 
   return id;
 }

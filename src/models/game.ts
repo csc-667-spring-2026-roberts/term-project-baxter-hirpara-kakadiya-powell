@@ -28,7 +28,7 @@ import {
   gameStatus,
 } from "../shared/env.js";
 import { MOCK_GAME_ACTIONS } from "../mock.js";
-import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
+import { Game, GameUser, GameCard, GameAction, IRepository, GamePot } from "./types.js";
 import { GameConfig, Maybe } from "../shared/types.js";
 
 /**
@@ -89,10 +89,9 @@ class GameRepository implements IRepository<Game> {
       return null;
     }
 
-    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+    if (!validateMoney(data.small_blind, data.big_blind, data.last_raise_amount)) {
       logger.warn(
-        "create game with invalid money-types: " +
-          "small_blind || big_blind || pot_amount || last_raise_amount",
+        "create game with invalid money-types: " + "small_blind || big_blind || last_raise_amount",
       );
       return null;
     }
@@ -103,12 +102,10 @@ class GameRepository implements IRepository<Game> {
       return null;
     }
 
-    data.pot_amount = data.pot_amount ?? 0;
     data.last_raise_amount = data.last_raise_amount ?? 0;
-    if (data.pot_amount !== 0 || data.last_raise_amount !== 0) {
+    if (data.last_raise_amount !== 0) {
       logger.warn(
-        "create game with invalid starting money-types (expect 0): " +
-          "pot_amount || last_raise_amount",
+        "create game with invalid starting money-types (expect 0): " + "last_raise_amount",
       );
       return null;
     }
@@ -127,8 +124,8 @@ class GameRepository implements IRepository<Game> {
     try {
       const game = await db.one<Game>(
         `INSERT INTO games
-         (id, status, max_seats, small_blind, big_blind, deck_position, pot_amount, turn_deadline_at, current_player_id)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
+         (id, status, max_seats, small_blind, big_blind, deck_position, turn_deadline_at, current_player_id)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [
           data.status,
@@ -136,7 +133,6 @@ class GameRepository implements IRepository<Game> {
           data.small_blind,
           data.big_blind,
           data.deck_position,
-          data.pot_amount,
           data.turn_deadline_at ?? null,
           data.current_player_id ?? null,
         ],
@@ -173,10 +169,9 @@ class GameRepository implements IRepository<Game> {
     }
 
     // validate any money-types are valid:
-    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+    if (!validateMoney(data.small_blind, data.big_blind, data.last_raise_amount)) {
       logger.warn(
-        "update game with invalid money-types: " +
-          "small_blind || big_blind || pot_amount || last_raise_amount",
+        "update game with invalid money-types: " + "small_blind || big_blind || last_raise_amount",
       );
       return false;
     }
@@ -195,17 +190,15 @@ class GameRepository implements IRepository<Game> {
         small_blind = COALESCE($3, small_blind),
         big_blind = COALESCE($4, big_blind),
         deck_position = COALESCE($5, deck_position),
-        pot_amount = COALESCE($6, pot_amount),
-        turn_deadline_at = COALESCE($7, turn_deadline_at),
-        current_player_id = COALESCE($8, current_player_id)
-        WHERE id = $9`,
+        turn_deadline_at = COALESCE($6, turn_deadline_at),
+        current_player_id = COALESCE($7, current_player_id)
+        WHERE id = $8`,
         [
           data.status,
           data.max_seats,
           data.small_blind,
           data.big_blind,
           data.deck_position,
-          data.pot_amount,
           data.turn_deadline_at,
           data.current_player_id,
           id,
@@ -918,6 +911,55 @@ class GameRepository implements IRepository<Game> {
       logger.error(String(err));
       throw err;
     }
+  }
+
+  /**
+   * Updates pot with requested delta and allocates side pots if user balance
+   * is less than delta.
+   *
+   * @returns Amount of User balance added to pot.
+   */
+  async updatePot(_gameId: string, _userId: string, _delta: number): Promise<number | null> {
+    return null;
+  }
+
+  /**
+   * Get the GamePots for the winning userId. Split pots can occur due to
+   * different all-in chip-stacks, so if winning player bets > 0th pot they
+   * should receive 0th pot + split pots.
+   */
+  async getPot(_gameId: string, _userId: string): Promise<GamePot[] | null> {
+    return null;
+  }
+
+  /**
+   * Return all pots for all winning players, with each pot mapped to
+   * respective winning userId.
+   */
+  async getPots(_gameId: string, _userIds: string[]): Promise<Record<string, GamePot[]> | null> {
+    return null;
+  }
+
+  /**
+   * For when the player folds, remove their eligibility from all pots.
+   *
+   * @returns Amount of money forfeited that was bet into the pot, or null if
+   * error.
+   */
+  async removePotUser(
+    _gameId: string,
+    _userId: string,
+    _potNum?: Maybe<number>,
+  ): Promise<number | null> {
+    return null;
+  }
+
+  /**
+   * Given GamePots, deposit into userId's balance. Remove pot from game, since
+   * it's been claimed.
+   */
+  async depositPot(_gameId: string, _userId: string, _pot: GamePot[]): Promise<boolean> {
+    return false;
   }
 
   /**

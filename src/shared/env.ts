@@ -6,7 +6,6 @@
  * Global constants and other TS environment variables.
  */
 
-import { Action } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmActions";
 import type { GameConfig } from "./types.js";
 
 // allowed query parameter commands, so users can't pass arbitrary commands
@@ -153,3 +152,25 @@ export const GAME_CONFIGS: Record<string, GameConfig> = {
   high6: { ...blindConfigs.high, maxSeats: 6 },
   high9: { ...blindConfigs.high, maxSeats: 9 },
 };
+
+/**
+ * Valid SUITS and RANKS string types.
+ */
+export const SUITS = ["heart", "diamond", "club", "spade"] as const;
+export const RANKS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "jack",
+  "queen",
+  "king",
+] as const;
+export type Suit = (typeof SUITS)[number];
+export type Rank = (typeof RANKS)[number];

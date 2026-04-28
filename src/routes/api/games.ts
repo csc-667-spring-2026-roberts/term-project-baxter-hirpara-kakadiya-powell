@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @file routes/api/games.ts
  * @author Tyler Baxter
@@ -10,7 +11,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth } from "../middleware.js";
 import GameRepository from "../../models/game.js";
 import { shuffleDeck } from "../../shared/util.js";
-import { GameParams, TypedRequest } from "../../types.js";
+import { GameParams, TypedRequest, GameRequest, GameEventBody } from "../../types.js";
 import { GameConfig } from "../../shared/types.js";
 import { Game } from "../../models/types.js";
 import {
@@ -19,6 +20,7 @@ import {
   GamesEventEnum,
   ACTION_MAP,
   ActionEnum,
+  Action,
 } from "../../shared/env.js";
 import { HttpError, ResponseError } from "../../util/error.js";
 import logger from "../../util/logger.js";
@@ -253,11 +255,65 @@ router.post("/games/:id/deal", requireAuth, (_req: Request<GameParams>, res: Res
   res.redirect("/");
 });
 
+/*
+function handleAction(action: Action) {
+  switch (action) {
+  case ActionEnum.GAME_STARTED: {
+    broadcast({ type: ACTION_ENUM[ActionEnum.GAME_STARTED]
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+
+    break;
+  }
+  case ActionEnum.DEAL_COMMUNITY: {
+    break;
+  }
+  case ActionEnum.DEAL_HAND: {
+    break;
+  }
+  case ActionEnum.BET: {
+    break;
+  }
+  case ActionEnum.CALL: {
+    break;
+  }
+  case ActionEnum.RAISE: {
+    break;
+  }
+  case ActionEnum.CHECK: {
+    break;
+  }
+  case ActionEnum.FOLD: {
+    break;
+  }
+  case ActionEnum.ALL_IN: {
+    break;
+  }
+  case ActionEnum.SHOWDOWN: {
+    break;
+  }
+  case ActionEnum.PAYOUT: {
+    break;
+  }
+  case ActionEnum.GAME_ENDED: {
+    break;
+  }
+  case ActionEnum.PLAYER_JOINED: {
+    break;
+  }
+  case ActionEnum.PLAYER_LEFT: {
+    break;
+  }
+  default:
+    logger.error(`invalid action: ${action}`);
+}
+*/
+
 /**
  * SSE endpoint for live game state.
  */
-router.get("/games/:id/events", requireAuth, (req: Request<GameParams>, res: Response) => {
-  addClient(res, req.session.userId as string, req.params.id);
+router.get("/games/:id/events", requireAuth, (req: GameRequest<GameEventBody>, res: Response) => {
+  const action = req.body.action;
+  //handleAction(action);
 });
 
 /**
