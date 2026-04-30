@@ -29,6 +29,10 @@ button {
   border-color: #e94560;
 }
 
+button:hover {
+  opacity: 0.9;
+}
+
 input {
   width: 100%;
 }
@@ -74,8 +78,16 @@ header > :last-child {
 
 /* flash messages */
 .flash {
-  padding: 10px;
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 6px;
   color: white;
+  z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  font-weight: bold;
   animation: fadeOut 3s forwards;
 }
 .flash.error {
@@ -193,6 +205,7 @@ header > :last-child {
   font-size: 0.5rem;
 }
 
+<<<<<<< HEAD
 dialog {
   background: #16213e;
   color: inherit;
@@ -203,6 +216,45 @@ dialog {
 }
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.6);
+=======
+/* ===== UI POLISH ADDITIONS ===== */
+
+/* Improve container look */
+.container {
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Improve form inputs */
+.form-group input {
+  padding: 0.6rem;
+  border-radius: 5px;
+}
+
+/* Improve dropdown menu */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+.dropdown-menu a,
+.dropdown-menu span {
+  display: block;
+  padding: 0.3rem 0.5rem;
+}
+
+.dropdown-menu a:hover {
+  background: #1f2a4d;
+}
+
+/* Prevent flash from overlapping header */
+.flash {
+  top: 60px;
+>>>>>>> 275c647 (Style login, create-account, and error pages)
 }
 
 /* vim: set ts=2 sw=2 sts=2 noet filetype=css: */
