@@ -79,18 +79,7 @@ header > :last-child {
 /* flash messages */
 .flash {
   position: fixed;
-<<<<<<< Updated upstream
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 10px 20px;
-  border-radius: 6px;
-  color: white;
-  z-index: 1000;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  font-weight: bold;
-=======
-  top: 70px; /* below header */
+  top: 70px;
   left: 50%;
   transform: translateX(-50%);
 
@@ -105,7 +94,6 @@ header > :last-child {
 
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   
->>>>>>> Stashed changes
   animation: fadeOut 3s forwards;
 }
 .flash.error {
