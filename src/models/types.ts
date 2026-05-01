@@ -33,6 +33,24 @@ export interface User {
 }
 
 /**
+ * Pot for a game. There can be multiple pots because of split pots from
+ * different all-in amounts.
+ */
+export interface GamePot {
+  amount: number;
+  eligible: GamePotUser[];
+}
+
+/**
+ * Eligible User for a game pot, with their contributed amount.
+ */
+export interface GamePotUser {
+  // amount this user has contributed, for refunds if pot unexpectedly deletes
+  amount: number;
+  user_id: string;
+}
+
+/**
  * Game model.
  */
 export interface Game {
@@ -41,7 +59,7 @@ export interface Game {
   created_at: Date;
   ended_at: Date | null;
   updated_at: Date;
-  pot_amount: number;
+  pots: GamePot[];
   turn_deadline_at: Date | null;
   current_player_id: string | null;
   max_seats: number;
@@ -74,6 +92,7 @@ export interface GameUser {
   status: UserStatus;
   is_dealer: boolean;
   joined_at: Date | null;
+  last_bet: number;
 }
 
 /**
