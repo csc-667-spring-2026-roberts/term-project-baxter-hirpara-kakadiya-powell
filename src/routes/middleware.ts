@@ -13,10 +13,17 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
     `unauthorized access attempt to ${req.originalUrl} from user id: ${req.session.userId ?? "null"}`,
   );
 
-  // save previous url
-  req.session.returnTo = req.originalUrl;
-  // redirect to login (after login, will restore saved url user intended)
-  res.redirect("/login");
+  // save previous url (referer is the page the user was on, not the
+  // endpoint they were trying to hit — avoids POST-to-GET mismatch)
+  req.session.returnTo = req.get("referer") ?? "/";
+
+  // API requests get 401 JSON (fetch can't follow redirects for navigation)
+  // page requests get redirected to login
+  if (req.originalUrl.startsWith("/api")) {
+    res.status(401).json({ error: "not authenticated" });
+  } else {
+    res.redirect("/login");
+  }
 }
 
 /**

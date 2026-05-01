@@ -52,6 +52,10 @@ if (dealerIndex !== -1 && sortedPlayers.length > 1) {
 		<span class="seat-username">Empty</span>
 		<% } %>
 	</div>
+
+	<% if (seatPlayer && seatPlayer.is_dealer) { %>
+	<div class="seat-dealer">(D)</div>
+	<% } %>
 	<div class="seat-last-action" id="seat-last-action-<%= seatNo %>"></div>
 </div>
 <!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->

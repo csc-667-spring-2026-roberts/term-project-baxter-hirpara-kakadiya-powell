@@ -23,6 +23,7 @@ import gamesRouter from "./routes/api/games.js";
 import messagesRouter from "./routes/api/messages.js";
 import userRouter from "./routes/user.js";
 import lobbyRouter from "./routes/lobby.js";
+import lobbyApiRouter from "./routes/api/lobby.js";
 
 // Use environment variable or fallback to string
 export const PORT: string = process.env.PORT ?? "3000";
@@ -175,6 +176,7 @@ app.use("/", lobbyRouter);
 app.use("/api", usersRouter);
 app.use("/api", gamesRouter);
 app.use("/api", messagesRouter);
+app.use("/api", lobbyApiRouter);
 
 app.use(errorHandler);
 
