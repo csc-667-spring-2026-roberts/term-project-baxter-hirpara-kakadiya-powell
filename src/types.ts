@@ -7,6 +7,7 @@
  */
 
 import { Request } from "express";
+import { Action } from "./shared/env.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -19,9 +20,9 @@ export interface TypedRequest<T> extends Request {
   body: T;
 }
 
-export interface LoginRequest extends Request {
-  email: string;
-  password: string;
+export interface GameRequest<T> extends Request {
+  params: { id: string };
+  body: T;
 }
 
 export type GameParams = {
@@ -31,4 +32,8 @@ export type GameParams = {
 
 export type UserParams = {
   id: string;
+};
+
+export type GameEventBody = {
+  action: Action;
 };
