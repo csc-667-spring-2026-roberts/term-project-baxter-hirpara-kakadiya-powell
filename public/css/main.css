@@ -29,6 +29,10 @@ button {
   border-color: #e94560;
 }
 
+button:hover {
+  opacity: 0.9;
+}
+
 input {
   width: 100%;
 }
@@ -74,8 +78,22 @@ header > :last-child {
 
 /* flash messages */
 .flash {
-  padding: 10px;
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 12px 20px;
+  border-radius: 6px;
+
   color: white;
+  font-weight: bold;
+  text-align: center;
+
+  z-index: 1000;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  
   animation: fadeOut 3s forwards;
 }
 .flash.error {
@@ -191,18 +209,6 @@ header > :last-child {
 .avatar-sm {
   width: 1.3rem;
   font-size: 0.5rem;
-}
-
-dialog {
-  background: #16213e;
-  color: inherit;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 1.5rem;
-  margin: auto;
-}
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.6);
 }
 
 /* vim: set ts=2 sw=2 sts=2 noet filetype=css: */

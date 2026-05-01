@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /**
  * @file routes/game.ts
  * @author Tyler Baxter
