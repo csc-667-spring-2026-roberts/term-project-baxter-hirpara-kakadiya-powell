@@ -6,6 +6,8 @@
  * Client-side game render logic.
  */
 
+import { indexToCard } from "../shared/util.js";
+
 // UTIL
 const Action = Object.freeze({
   DEAL_COMMUNITY: 0,
@@ -20,14 +22,11 @@ const Action = Object.freeze({
   PAYOUT: 9,
 });
 
-const SUITS = ["heart", "diamond", "club", "spade"];
-const RANKS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king"];
 const CARD_SVG = "/img/svg-cards.svg";
 const CARD_VIEWBOX = "0 0 169.075 244.64";
 
 function renderCard(cardNum: number, container: Element): void {
-  const suit = SUITS[Math.floor(cardNum / 13)] as string;
-  const rank = RANKS[cardNum % 13] as string;
+  const { rank, suit } = indexToCard(cardNum);
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
@@ -137,6 +136,6 @@ function setLastAction(userId: string, action: string): void {
 // SSE
 const evtSource = new EventSource(`/api/games/${gameId}/events`);
 evtSource.addEventListener("last-action", (e: MessageEvent) => {
-  const data = JSON.parse(e.data) as { userId: string; action: string };
+  const data = JSON.parse(e.data as string) as { userId: string; action: string };
   setLastAction(data.userId, data.action);
 });
