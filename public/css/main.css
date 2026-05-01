@@ -193,4 +193,38 @@ header > :last-child {
   font-size: 0.5rem;
 }
 
+/* ===== Action Bar Fix ===== */
+#action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.action-section {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.game-button {
+  padding: 0.5rem 0.8rem;
+  min-width: 70px;
+}
+
+.game-input {
+  width: 80px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  #action-bar {
+    flex-direction: column;
+  }
+
+  .action-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 /* vim: set ts=2 sw=2 sts=2 noet filetype=css: */
