@@ -35,6 +35,7 @@ if (dealerIndex !== -1 && sortedPlayers.length > 1) {
 		<%- include('../avatar', { user: seatPlayer, size: 'sm' }) %>
 		<p class="seat-username"><%= seatPlayer.username %></p>
 		<p class="seat-balance money">$<%= seatPlayer.balance %></p>
+
 		<% if (seatPlayer.is_dealer) { %>
 			<span class="seat-dealer">(D)</span>
 		<% } %>
@@ -52,7 +53,6 @@ if (dealerIndex !== -1 && sortedPlayers.length > 1) {
 		<span class="seat-username">Empty</span>
 		<% } %>
 	</div>
-
 	<div class="seat-last-action" id="seat-last-action-<%= seatNo %>"></div>
 </div>
 <!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->
