@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @file routes/api/games.ts
  * @author Tyler Baxter
@@ -10,12 +11,20 @@ import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth } from "../middleware.js";
 import GameRepository from "../../models/game.js";
 import { shuffleDeck } from "../../shared/util.js";
-import { GameParams, TypedRequest } from "../../types.js";
+import { GameParams, TypedRequest, GameRequest, GameEventBody } from "../../types.js";
 import { GameConfig } from "../../shared/types.js";
 import { Game } from "../../models/types.js";
-import { GAME_CONFIGS, GameStatus } from "../../shared/env.js";
+import {
+  GAME_CONFIGS,
+  GameStatus,
+  GamesEventEnum,
+  ACTION_MAP,
+  ActionEnum,
+  Action,
+} from "../../shared/env.js";
 import { HttpError, ResponseError } from "../../util/error.js";
 import logger from "../../util/logger.js";
+import { broadcast, addClient } from "../../sse.js";
 
 // xxx short-circuit to be simple
 const DEFAULT_BUYIN = 100;
@@ -28,7 +37,7 @@ const router = Router();
  * @note NO requireAuth, so that guests can spectate games from the lobby (but
  * can't join)
  */
-router.get("/games", async (_req: Request<GameParams>, res: Response, next: NextFunction) => {
+router.get("/games", async (req: Request<GameParams>, res: Response, next: NextFunction) => {
   /**
    * @note since this an api request, ${error_handling_policy - blank json?}
    */
@@ -36,7 +45,7 @@ router.get("/games", async (_req: Request<GameParams>, res: Response, next: Next
     // games
     // xxx let's have find available take an optional search predicate to apply
     // more query filters!
-    const games = await GameRepository.findAvailableAll();
+    const games = await GameRepository.findAvailableAll(req.session.userId);
     if (!games) {
       // not an error, just display an empty list
       // xxx maybe we want to change the contract of findAvailableAll to just
@@ -90,17 +99,26 @@ router.get(
 router.post(
   "/games/create",
   requireAuth,
-  async (req: TypedRequest<GameParams>, res: Response, next: NextFunction) => {
-    const config = req.body.config;
+  async (
+    req: TypedRequest<{ blinds: string; seats: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { blinds, seats } = req.body;
     let cfg: GameConfig | null = null;
 
-    if (config) {
-      cfg = GAME_CONFIGS[config] ?? null;
+    if (blinds && seats) {
+      const [sm, big] = blinds.split("/").map(Number);
+      const maxSeats = Number(seats);
+      cfg =
+        Object.values(GAME_CONFIGS).find(
+          (c) => c.smallBlind === sm && c.bigBlind === big && c.maxSeats === maxSeats,
+        ) ?? null;
     }
 
     if (!cfg) {
       req.flash("error", "invalid game configuration");
-      res.redirect("last");
+      res.redirect("back");
       return;
     }
 
@@ -139,7 +157,11 @@ router.post(
         return;
       }
 
-      res.redirect(`/api/games/${game.id}/join`);
+      // lobby broadcast: new game created
+      const games = await GameRepository.findAvailableAll();
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+
+      res.json({ game });
     } catch (err) {
       next(err);
     }
@@ -164,12 +186,24 @@ router.post(
         return;
       }
 
-      // let model handle validation of userId
-      if (!(await GameRepository.addUser(game.id, userId, DEFAULT_BUYIN))) {
-        // xxx HttpError or flash?
+      // seat is optional — from game page (specific seat) or lobby (auto-assign)
+      const seatNo = req.query.seat ? Number(req.query.seat) : null;
+
+      // let model handle validation of userId + seat assignment
+      if (!(await GameRepository.addUser(game.id, userId, DEFAULT_BUYIN, seatNo))) {
+        // xxx this should be flash, but since we can come from a different page
+        // (i.e., create -> join), then we have awkward timing and need to
+        // handle our next/session store carefully
         next(new HttpError("Failed to join game", 404));
         return;
       }
+
+      // lobby broadcast: player_count changed
+      const games = await GameRepository.findAvailableAll();
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+
+      // game-room broadcast
+      broadcast({ type: ACTION_MAP[ActionEnum.PLAYER_JOINED], userId }, (c) => c.gameId === id);
 
       res.redirect(`/game/${id}`);
     } catch (err) {
@@ -182,9 +216,30 @@ router.post(
  * Exit a game.
  * xxx logic to remove player from game
  */
-router.post("/games/:id/exit", requireAuth, (_req: Request<GameParams>, res: Response) => {
-  res.redirect("/");
-});
+router.post(
+  "/games/:id/exit",
+  requireAuth,
+  async (req: Request<GameParams>, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const userId = req.session.userId as string;
+
+    try {
+      // xxx logic to remove player from game
+      if (!(await GameRepository.removeUser(id, userId))) {
+        next(new HttpError("Failed to exit game", 404));
+        return;
+      }
+
+      const games = await GameRepository.findAvailableAll();
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+      broadcast({ type: ACTION_MAP[ActionEnum.PLAYER_LEFT], userId }, (c) => c.gameId === id);
+
+      res.redirect("/lobby");
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * User actions (bet, call, raise, check, fold, all-in).
@@ -200,11 +255,65 @@ router.post("/games/:id/deal", requireAuth, (_req: Request<GameParams>, res: Res
   res.redirect("/");
 });
 
+/*
+function handleAction(action: Action) {
+  switch (action) {
+  case ActionEnum.GAME_STARTED: {
+    broadcast({ type: ACTION_ENUM[ActionEnum.GAME_STARTED]
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+
+    break;
+  }
+  case ActionEnum.DEAL_COMMUNITY: {
+    break;
+  }
+  case ActionEnum.DEAL_HAND: {
+    break;
+  }
+  case ActionEnum.BET: {
+    break;
+  }
+  case ActionEnum.CALL: {
+    break;
+  }
+  case ActionEnum.RAISE: {
+    break;
+  }
+  case ActionEnum.CHECK: {
+    break;
+  }
+  case ActionEnum.FOLD: {
+    break;
+  }
+  case ActionEnum.ALL_IN: {
+    break;
+  }
+  case ActionEnum.SHOWDOWN: {
+    break;
+  }
+  case ActionEnum.PAYOUT: {
+    break;
+  }
+  case ActionEnum.GAME_ENDED: {
+    break;
+  }
+  case ActionEnum.PLAYER_JOINED: {
+    break;
+  }
+  case ActionEnum.PLAYER_LEFT: {
+    break;
+  }
+  default:
+    logger.error(`invalid action: ${action}`);
+}
+*/
+
 /**
  * SSE endpoint for live game state.
  */
-router.get("/games/:id/events", requireAuth, (_req: Request<GameParams>, res: Response) => {
-  res.status(200).end();
+router.get("/games/:id/events", requireAuth, (req: GameRequest<GameEventBody>, res: Response) => {
+  const action = req.body.action;
+  //handleAction(action);
 });
 
 /**

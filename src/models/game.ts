@@ -12,7 +12,6 @@ import db, { pgp } from "../db/connection.js";
 import logger from "../util/logger.js";
 import {
   validatePosition,
-  restoreBalance,
   validateMoney,
   validateGameConfig,
   validateSeats,
@@ -29,7 +28,7 @@ import {
   gameStatus,
 } from "../shared/env.js";
 import { MOCK_GAME_ACTIONS } from "../mock.js";
-import { Game, GameUser, GameCard, GameAction, IRepository } from "./types.js";
+import { Game, GameUser, GameCard, GameAction, IRepository, GamePot } from "./types.js";
 import { GameConfig, Maybe } from "../shared/types.js";
 
 /**
@@ -68,7 +67,7 @@ class GameRepository implements IRepository<Game> {
   /**
    * create a new game
    * @param _data - Partial game data used to create the game
-   * @returns A mock game object representing the created game
+   * @returns A game model of the created game
    */
   // eslint-disable-next-line complexity
   async create(data: Partial<Game>): Promise<Game | null> {
@@ -90,10 +89,9 @@ class GameRepository implements IRepository<Game> {
       return null;
     }
 
-    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+    if (!validateMoney(data.small_blind, data.big_blind, data.last_raise_amount)) {
       logger.warn(
-        "create game with invalid money-types: " +
-          "small_blind || big_blind || pot_amount || last_raise_amount",
+        "create game with invalid money-types: " + "small_blind || big_blind || last_raise_amount",
       );
       return null;
     }
@@ -104,12 +102,10 @@ class GameRepository implements IRepository<Game> {
       return null;
     }
 
-    data.pot_amount = data.pot_amount ?? 0;
     data.last_raise_amount = data.last_raise_amount ?? 0;
-    if (data.pot_amount !== 0 || data.last_raise_amount !== 0) {
+    if (data.last_raise_amount !== 0) {
       logger.warn(
-        "create game with invalid starting money-types (expect 0): " +
-          "pot_amount || last_raise_amount",
+        "create game with invalid starting money-types (expect 0): " + "last_raise_amount",
       );
       return null;
     }
@@ -128,8 +124,8 @@ class GameRepository implements IRepository<Game> {
     try {
       const game = await db.one<Game>(
         `INSERT INTO games
-         (status, max_seats, small_blind, big_blind, deck_position, pot_amount, turn_deadline_at, current_player_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (id, status, max_seats, small_blind, big_blind, deck_position, turn_deadline_at, current_player_id)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [
           data.status,
@@ -137,7 +133,6 @@ class GameRepository implements IRepository<Game> {
           data.small_blind,
           data.big_blind,
           data.deck_position,
-          data.pot_amount,
           data.turn_deadline_at ?? null,
           data.current_player_id ?? null,
         ],
@@ -174,10 +169,9 @@ class GameRepository implements IRepository<Game> {
     }
 
     // validate any money-types are valid:
-    if (!validateMoney(data.small_blind, data.big_blind, data.pot_amount, data.last_raise_amount)) {
+    if (!validateMoney(data.small_blind, data.big_blind, data.last_raise_amount)) {
       logger.warn(
-        "update game with invalid money-types: " +
-          "small_blind || big_blind || pot_amount || last_raise_amount",
+        "update game with invalid money-types: " + "small_blind || big_blind || last_raise_amount",
       );
       return false;
     }
@@ -196,17 +190,15 @@ class GameRepository implements IRepository<Game> {
         small_blind = COALESCE($3, small_blind),
         big_blind = COALESCE($4, big_blind),
         deck_position = COALESCE($5, deck_position),
-        pot_amount = COALESCE($6, pot_amount),
-        turn_deadline_at = COALESCE($7, turn_deadline_at),
-        current_player_id = COALESCE($8, current_player_id)
-        WHERE id = $9`,
+        turn_deadline_at = COALESCE($6, turn_deadline_at),
+        current_player_id = COALESCE($7, current_player_id)
+        WHERE id = $8`,
         [
           data.status,
           data.max_seats,
           data.small_blind,
           data.big_blind,
           data.deck_position,
-          data.pot_amount,
           data.turn_deadline_at,
           data.current_player_id,
           id,
@@ -241,22 +233,22 @@ class GameRepository implements IRepository<Game> {
     try {
       return await db.tx(async (t) => {
         // delete game_actions
+        // not necessarily made, in case of new game - no rollback
         const actions = await t.result("DELETE FROM game_actions WHERE game_id = $1", [gameId]);
         if (actions.rowCount <= 0) {
           logger.warn(`no game_actions found for game_id: ${gameId}`);
-          throw new RollbackError();
         }
         // delete game_cards
+        // not necessarily made, in case of new game - no rollback
         const cards = await t.result("DELETE FROM game_cards WHERE game_id = $1", [gameId]);
         if (cards.rowCount <= 0) {
           logger.warn(`no game_cards found for game_id: ${gameId}`);
-          throw new RollbackError();
         }
         // delete game_users
+        // not necessarily made, in case of new game - no rollback
         const users = await t.result("DELETE FROM game_users WHERE game_id = $1", [gameId]);
         if (users.rowCount <= 0) {
           logger.warn(`no game_users found for game_id: ${gameId}`);
-          throw new RollbackError();
         }
         // delete the game itself
         const game = await t.result("DELETE FROM games WHERE id = $1", [gameId]);
@@ -329,7 +321,7 @@ class GameRepository implements IRepository<Game> {
       // find oldest games for players to join
       const games = await db.any<Game>(
         `
-				SELECT g.*, COUNT(gu.user_id) AS player_count
+				SELECT g.*, COUNT(gu.user_id)::int AS player_count
 				FROM games g
 				LEFT JOIN game_users gu ON gu.game_id = g.id
 				WHERE g.small_blind = $1
@@ -353,21 +345,28 @@ class GameRepository implements IRepository<Game> {
    * @returns List of Games that match blinds of GameConfig (empty list if none
    * found), or null if invalid.
    */
-  async findAvailableAll(): Promise<Game[] | null> {
+  async findAvailableAll(userId: Maybe<string> = null): Promise<Game[] | null> {
     try {
       // order by status first (recall: WAITING = 0, PLAYING = 1, ...) which
       // will push pending games to the top, then order by created_at ASC to
       // find oldest games for players to join
+      // xxx $2 (userId) is Maybe<string> - pg-promise sends null/undefined as
+      // SQL NULL, so the IS NULL branch skips the filter for guests.
+      // ideally we'd branch in JS instead of relying on this SQL trick.
       return await db.any<Game>(
         `
-				SELECT g.*, COUNT(gu.user_id) AS player_count
+				SELECT g.*, COUNT(gu.user_id)::int AS player_count
 				FROM games g
 				LEFT JOIN game_users gu ON gu.game_id = g.id
 				WHERE g.status != $1
+				  AND ($2::uuid IS NULL OR NOT EXISTS (
+				    SELECT 1 FROM game_users gu2
+				    WHERE gu2.game_id = g.id AND gu2.user_id = $2
+				  ))
 				GROUP BY g.id
 				HAVING COUNT(gu.user_id) < g.max_seats
         ORDER BY status, created_at ASC`,
-        [GameStatus.ENDED],
+        [GameStatus.ENDED, userId],
       );
     } catch (err) {
       logger.error(String(err));
@@ -379,33 +378,52 @@ class GameRepository implements IRepository<Game> {
    * Add a player to a game, deduct buy-in from user balance. DB rollback on
    * operation failure.
    *
+   * @pre if seatNo is provided, it's valid for this game's GameConfig.
+   *
    * @param gameId - The game's ID
    * @param userId - The user's ID
-   * @param seatNo - The seat number to assign
    * @param buyIn - The buy-in amount to deduct from user balance
+   * @param seatNo - Optional: The seat number to assign
    * @returns TRUE for SUCCESS, FALSE for FAILURE
    */
   // xxx do we need buyIn? do we want to just have a set amount, or a
   // user-specified as some multiple of bb? for now, let's start simple and just
   // use a constant in the routes for the buyIn
-  async addUser(gameId: string, userId: string, seatNo: number, buyIn: number): Promise<boolean> {
-    // xxx update player_count and seatNo of player
-    if (!gameId || !userId || seatNo < 0 || buyIn <= 0) {
+  // eslint-disable-next-line max-lines-per-function
+  async addUser(
+    gameId: string,
+    userId: string,
+    buyIn: number,
+    seatNo: Maybe<number>,
+  ): Promise<boolean> {
+    if (!gameId || !userId || buyIn <= 0) {
       logger.warn("invalid parameters for addUser");
       return false;
     }
 
+    if (!validateMoney(buyIn)) {
+      logger.warn(`invalid money-type for buy in: ${String(buyIn)}`);
+      return false;
+    }
+
+    // do we need to validate seatNo against GAME_CONFIGS? theoretically we should, but
+    // we'd need to construct a full game object to perform that validation.
+    // instead, we assume this is a precondition, since the caller should already
+    // have a game object to have a gameId
+
     try {
       return await db.tx(async (t) => {
-        const game = await t.oneOrNone<{ id: string }>(
-          "SELECT id FROM games WHERE id = $1 AND status = $2",
-          [gameId, GameStatus.WAITING],
+        // 1. select game
+        const game = await t.oneOrNone<{ id: string; max_seats: number }>(
+          "SELECT id, max_seats FROM games WHERE id = $1 AND status != $2",
+          [gameId, GameStatus.ENDED],
         );
         if (!game) {
-          logger.warn(`game (${gameId}) not found or not in WAITING status`);
+          logger.warn(`game (${gameId}) not found or has ENDED status`);
           throw new RollbackError();
         }
 
+        // 2. does this user already exist in game? fail-fast
         const existing = await t.oneOrNone<{ user_id: string }>(
           "SELECT user_id FROM game_users WHERE game_id = $1 AND user_id = $2",
           [gameId, userId],
@@ -415,15 +433,7 @@ class GameRepository implements IRepository<Game> {
           throw new RollbackError();
         }
 
-        const seatTaken = await t.oneOrNone<{ seat_no: number }>(
-          "SELECT seat_no FROM game_users WHERE game_id = $1 AND seat_no = $2",
-          [gameId, seatNo],
-        );
-        if (seatTaken) {
-          logger.warn(`seat (${String(seatNo)}) already taken in game (${gameId})`);
-          throw new RollbackError();
-        }
-
+        // 3. does this user have enough balance to join the game? fail-fast
         const user = await t.oneOrNone<{ balance: number }>(
           "SELECT balance FROM users WHERE id = $1",
           [userId],
@@ -433,21 +443,56 @@ class GameRepository implements IRepository<Game> {
           throw new RollbackError();
         }
 
-        const deduct = await t.result("UPDATE users SET balance = balance - $1 WHERE id = $2", [
-          buyIn,
-          userId,
-        ]);
-        if (deduct.rowCount <= 0) {
-          logger.warn(`failed to deduct buy-in from user (${userId})`);
-          throw new RollbackError();
+        // 4. atomic seat insert, so there's no race on seat update between
+        // calls. game status also re-verified atomically
+        if (seatNo != null) {
+          const insert = await t.oneOrNone<{ seat_no: number }>(
+            `
+						INSERT INTO game_users (game_id, user_id, seat_no, balance, status, is_dealer, joined_at)
+          	SELECT $1, $2, $3, $4, $5, $6, NOW()
+          	WHERE NOT EXISTS (
+          	  SELECT 1 FROM game_users WHERE game_id = $1 AND seat_no = $3
+          	)
+          	AND EXISTS (
+          	  SELECT 1 FROM games WHERE id = $1 AND status != $7
+          	)
+          	RETURNING seat_no`,
+            [gameId, userId, seatNo, buyIn, UserStatus.ACTIVE, false, GameStatus.ENDED],
+          );
+          if (insert == null) {
+            logger.warn(`seat (${String(seatNo)}) already taken in game (${gameId})`);
+            throw new RollbackError();
+          }
+        } else {
+          const insert = await t.oneOrNone<{ seat_no: number }>(
+            `
+						INSERT INTO game_users (game_id, user_id, seat_no, balance, status, is_dealer, joined_at)
+          	SELECT $1, $2, s.seat_no, $3, $4, $5, NOW()
+          	FROM generate_series(1, $6) AS s(seat_no)
+          	LEFT JOIN game_users gu ON gu.game_id = $1 AND gu.seat_no = s.seat_no
+          	WHERE gu.seat_no IS NULL
+          	AND EXISTS (
+          	  SELECT 1 FROM games WHERE id = $1 AND status != $7
+          	)
+          	ORDER BY s.seat_no ASC
+          	LIMIT 1
+          	RETURNING seat_no`,
+            [gameId, userId, buyIn, UserStatus.ACTIVE, false, game.max_seats, GameStatus.ENDED],
+          );
+          if (insert == null) {
+            logger.warn(`no open seats available in game (${gameId})`);
+            throw new RollbackError();
+          }
         }
 
-        const insert = await t.result(
-          "INSERT INTO game_users (game_id, user_id, seat_no, balance, status, is_dealer, joined_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())",
-          [gameId, userId, seatNo, buyIn, UserStatus.ACTIVE, false],
+        // now that seat has been committed, keep a sanity check on the db level
+        // for the already pre-validated balance, just in-case there was a race
+        const deduct = await t.oneOrNone<{ balance: number }>(
+          "UPDATE users SET balance = balance - $1 WHERE id = $2 AND balance >= $1 RETURNING balance",
+          [buyIn, userId],
         );
-        if (insert.rowCount <= 0) {
-          logger.warn(`failed to insert game_user for user (${userId}) in game (${gameId})`);
+        if (deduct == null) {
+          logger.warn(`failed to deduct buy-in from user (${userId})`);
           throw new RollbackError();
         }
 
@@ -456,6 +501,11 @@ class GameRepository implements IRepository<Game> {
     } catch (err) {
       if (err instanceof RollbackError) {
         logger.warn(`DB rollback for addUser: game_id (${gameId}), user_id (${userId})`);
+        return false;
+      }
+      // even after (A)CID, we hit unique constraint
+      if ((err as { code?: string }).code === "23505") {
+        logger.warn(`seat conflict on insert for game (${gameId}), user (${userId})`);
         return false;
       }
       logger.error(String(err));
@@ -478,7 +528,9 @@ class GameRepository implements IRepository<Game> {
     }
 
     try {
+      // tx is atomic, rollback if anything fails
       return await db.tx(async (t) => {
+        // 1. get game_user balance - fail-fast
         const gameUser = await t.oneOrNone<{ balance: number }>(
           "SELECT balance FROM game_users WHERE game_id = $1 AND user_id = $2",
           [gameId, userId],
@@ -488,17 +540,24 @@ class GameRepository implements IRepository<Game> {
           throw new RollbackError();
         }
 
-        if (!restoreBalance(userId, gameUser.balance)) {
-          logger.warn(`restoreBalance failed for user (${userId})`);
-          throw new RollbackError();
-        }
-
+        // 2. confirm remove user from game, before refunding them their balance
+        // (so we can't refund them while they're still in the game...)
         const del = await t.result("DELETE FROM game_users WHERE game_id = $1 AND user_id = $2", [
           gameId,
           userId,
         ]);
         if (del.rowCount <= 0) {
           logger.warn(`failed to delete game_user for game (${gameId}), user (${userId})`);
+          throw new RollbackError();
+        }
+
+        // 3. restore balance ONLY after successfully removed from game
+        const restore = await t.oneOrNone<{ balance: number }>(
+          "UPDATE users SET balance = balance + $1 WHERE id = $2 RETURNING balance",
+          [gameUser.balance, userId],
+        );
+        if (restore == null) {
+          logger.warn(`failed to restore balance for user (${userId})`);
           throw new RollbackError();
         }
 
@@ -852,6 +911,55 @@ class GameRepository implements IRepository<Game> {
       logger.error(String(err));
       throw err;
     }
+  }
+
+  /**
+   * Updates pot with requested delta and allocates side pots if user balance
+   * is less than delta.
+   *
+   * @returns Amount of User balance added to pot.
+   */
+  async updatePot(_gameId: string, _userId: string, _delta: number): Promise<number | null> {
+    return null;
+  }
+
+  /**
+   * Get the GamePots for the winning userId. Split pots can occur due to
+   * different all-in chip-stacks, so if winning player bets > 0th pot they
+   * should receive 0th pot + split pots.
+   */
+  async getPot(_gameId: string, _userId: string): Promise<GamePot[] | null> {
+    return null;
+  }
+
+  /**
+   * Return all pots for all winning players, with each pot mapped to
+   * respective winning userId.
+   */
+  async getPots(_gameId: string, _userIds: string[]): Promise<Record<string, GamePot[]> | null> {
+    return null;
+  }
+
+  /**
+   * For when the player folds, remove their eligibility from all pots.
+   *
+   * @returns Amount of money forfeited that was bet into the pot, or null if
+   * error.
+   */
+  async removePotUser(
+    _gameId: string,
+    _userId: string,
+    _potNum?: Maybe<number>,
+  ): Promise<number | null> {
+    return null;
+  }
+
+  /**
+   * Given GamePots, deposit into userId's balance. Remove pot from game, since
+   * it's been claimed.
+   */
+  async depositPot(_gameId: string, _userId: string, _pot: GamePot[]): Promise<boolean> {
+    return false;
   }
 
   /**
