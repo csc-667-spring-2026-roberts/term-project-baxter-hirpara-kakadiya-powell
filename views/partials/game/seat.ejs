@@ -1,45 +1,57 @@
 <%# partials/game/seat.ejs - Player seat %>
-<%# Calculate SB and BB positions (new) %>
+
 <%
-const dealerSeat = locals.players
-  ? locals.players.find(p => p.is_dealer)?.seat_no
-  : null;
+const players = locals.players || [];
+const sortedPlayers = [...players].sort((a, b) => a.seat_no - b.seat_no);
 
-const maxSeats = game && game.max_seats ? game.max_seats : 0;
+const dealerIndex = sortedPlayers.findIndex(p => p.is_dealer);
 
-const sbSeat = dealerSeat !== null ? (dealerSeat + 1) % maxSeats : null;
-const bbSeat = dealerSeat !== null ? (dealerSeat + 2) % maxSeats : null;
+let sbSeat = null;
+let bbSeat = null;
+
+if (dealerIndex !== -1 && sortedPlayers.length > 1) {
+  if (sortedPlayers.length === 2) {
+    // heads-up
+    sbSeat = sortedPlayers[dealerIndex].seat_no;
+    bbSeat = sortedPlayers[(dealerIndex + 1) % sortedPlayers.length].seat_no;
+  } else {
+    // normal poker
+    sbSeat = sortedPlayers[(dealerIndex + 1) % sortedPlayers.length].seat_no;
+    bbSeat = sortedPlayers[(dealerIndex + 2) % sortedPlayers.length].seat_no;
+  }
+}
 %>
-<% var seatPlayer = locals.players ? locals.players.find(p => p.seat_no === seatNo ) : null %>
-<div class="seat seat-<%= seatNo %>" id="seat-<%= seatNo %>" data-seat="<%= seatNo %>" data-userid="<%= seatPlayer ? seatPlayer.user_id : '' %>">
-    <!-- SB indicator (new) -->
-    <% if (sbSeat !== null && seatNo === sbSeat) { %>
-        <div class="seat-sb">(SB)</div>
-    <% } %>
 
-    <!-- BB indicator (new) -->
-    <% if (bbSeat !== null && seatNo === bbSeat) { %>
-        <div class="seat-bb">(BB)</div>
-    <% } %>
-    
-    <div class="seat-cards">
-        <% if (seatPlayer) { %>
-        <div class="card-slot" data-card-back></div>
-        <div class="card-slot" data-card-back></div>
-        <% } %>
-    </div>
-    <div class="seat-info">
-        <% if (seatPlayer) { %>
-        <%- include('../avatar', { user: seatPlayer, size: 'sm' }) %>
-        <p class="seat-username"><%= seatPlayer.username %></p>
-        <p class="seat-balance money">$<%= seatPlayer.balance %></p>
-        <% } else { %>
-        <span class="seat-username">Empty</span>
-        <% } %>
-    </div>
-    <% if (seatPlayer && seatPlayer.is_dealer) { %>
-    <div class="seat-dealer">(D)</div>
-    <% } %>
-    <div class="seat-last-action" id="seat-last-action-<%= seatNo %>"></div>
+<% var seatPlayer = plyaers.find(p => p.seat_no === seatNo ) %>
+<div class="seat seat-<%= seatNo %>" id="seat-<%= seatNo %>" data-seat="<%= seatNo %>" data-userid="<%= seatPlayer ? seatPlayer.user_id : '' %>">
+	<div class="seat-cards">
+		<% if (seatPlayer) { %>
+		<div class="card-slot" data-card-back></div>
+		<div class="card-slot" data-card-back></div>
+		<% } %>
+	</div>
+	<div class="seat-info">
+		<% if (seatPlayer) { %>
+		<%- include('../avatar', { user: seatPlayer, size: 'sm' }) %>
+		<p class="seat-username"><%= seatPlayer.username %></p>
+		<p class="seat-balance money">$<%= seatPlayer.balance %></p>
+		<% if (seatPlayer.is_dealer) { %>
+			<span class="seat-dealer">(D)</span>
+		<% } %>
+
+		<% if (sbSeat === seatPlayer.seat_no) { %>
+			<span class="seat-sb">(SB)</span>
+		<% } %>
+
+		<% if (bbSeat === seatPlayer.seat_no) { %>
+
+			<span class="seat-bb">(BB)</span>
+		<% } %>
+
+		<% } else { %>
+		<span class="seat-username">Empty</span>
+		<% } %>
+	</div>
+	<div class="seat-last-action" id="seat-last-action-<%= seatNo %>"></div>
 </div>
 <!-- vim: set ts=2 sw=2 sts=2 noet filetype=html: -->
