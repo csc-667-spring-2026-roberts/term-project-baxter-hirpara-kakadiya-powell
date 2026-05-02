@@ -29,7 +29,10 @@ import {
 } from "../shared/env.js";
 import { MOCK_GAME_ACTIONS } from "../mock.js";
 import { Game, GameUser, GameCard, GameAction, IRepository, GamePot } from "./types.js";
-import { GameConfig, Maybe } from "../shared/types.js";
+import { GameConfig, Maybe, Card } from "../shared/types.js";
+
+// 2 min
+const TURN_DEADLINE_SEC: number = 120;
 
 /**
  * Game repository.
@@ -217,6 +220,13 @@ class GameRepository implements IRepository<Game> {
       throw err;
     }
   }
+
+	/**
+	 * Update all Users for this Game from array of GameUser partials.
+	 */
+	async updateUsers(_gameId: string, users: Partial<GameUser>[]): Promise<boolean> {
+		return true;
+	};
 
   /**
    * Delete a game and all related data (users, cards, actions) by game ID.
@@ -637,6 +647,7 @@ class GameRepository implements IRepository<Game> {
       return false;
     }
 
+		// xxx needs to validate that user has amount left in balance...
     try {
       const result = await db.result(
         "UPDATE game_users SET balance = balance + $1 WHERE game_id = $2 AND user_id = $3",
@@ -781,7 +792,8 @@ class GameRepository implements IRepository<Game> {
    * @param location - Location for the card to be drawn to
    * @returns The card number, or null if operation failed
    */
-  async drawCard(gameId: string, location: CardLocation): Promise<number | null> {
+  async drawCard(gameId: string, location: CardLocation, amt: number): Promise<number | null> {
+		// xxx ADD AMT
     if (!gameId) {
       logger.warn(`invalid game_id: ${gameId}`);
       return null;
@@ -834,6 +846,30 @@ class GameRepository implements IRepository<Game> {
       throw err;
     }
   }
+
+	/**
+	 * Batch draw multiple cards.
+	 *
+	 * @returns An array of Cards, or null if invalid query. Throws database
+	 * exceptions up to caller.
+	 */
+	async drawCards(gameId: string, location: CardLocation, amt: number): Promise<Card[] | null> {
+		// xxx err check
+		if (amt < 0) {
+			// allow zero - it's technically valid for a 0 length cards array. we
+			// should only error if amt is invalid mapping to array length
+			logger.warn(`invalid amount: ${amt}`);
+			return null;
+		}
+
+		cards: Card[] = [];
+		for (let i = 0; i < amt; i++) {
+			card = await this.drawCard(gameId, location);
+			cards.push(indexToCard(card));
+		}
+
+		return cards;
+	}
 
   /**
    * Get a user's hand (hole cards).
@@ -961,6 +997,57 @@ class GameRepository implements IRepository<Game> {
   async depositPot(_gameId: string, _userId: string, _pot: GamePot[]): Promise<boolean> {
     return false;
   }
+
+	/**
+	 * Update the turn deadline for this game.
+	 */
+	async updateDeadline(_gameId: string, deadline: number): Promise<boolean> {
+		return false;
+	}
+
+	/**
+	 * Update game state to next turn and return updated game state.
+	 */
+	async nextTurn(gameId: string): Promise<Game | null> {
+		let game = await this.findById(gameId);
+		const players = await this.getUsers(gameId);
+
+		// game start:
+		if (game.current_player_id == null) {
+			// set as seat 0
+			let player = players.filter(p => p.seat_no === 0);
+			// xxx should already be set when player 0 joins
+			player.is_dealer = true;
+			game.current_player_id = player.user_id;
+		// normal game flow:
+		} else {
+			const len = players.length;
+			const nextSeat = (curSeat) => {
+				return (curSeat + 1) % len;
+			});
+			const cur = players.filter(p => {
+				return p.user_id === game.current_player_id;
+			});
+			let next = players.filter(p => {
+				return p.seat_no === nextSeat(cur.seat_no);
+			});
+		}
+
+		// set new turn deadline
+		game.turn_deadline_at = new Date(Date.now() + TURN_DEADLINE_SECS * 1000);
+
+		// xxx need to rollback/be atomic
+		if (!this.update(gameId, game)) {
+			logger.warn(`failed to update game for gameId: ${gameId}`);
+			return null;
+		}
+		if (!this.updateUsers(gameId, players)) {
+			logger.warn(`failed to update users for gameId: ${gameId}`);
+			return null;
+		}
+
+		return game;
+	}
 
   /**
    * Record a game action

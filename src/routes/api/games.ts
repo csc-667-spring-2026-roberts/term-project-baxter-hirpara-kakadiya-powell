@@ -200,7 +200,7 @@ router.post(
 
       // lobby broadcast: player_count changed
       const games = await GameRepository.findAvailableAll();
-      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] });
 
       // game-room broadcast
       broadcast({ type: ACTION_MAP[ActionEnum.PLAYER_JOINED], userId }, (c) => c.gameId === id);
@@ -255,58 +255,147 @@ router.post("/games/:id/deal", requireAuth, (_req: Request<GameParams>, res: Res
   res.redirect("/");
 });
 
-/*
-function handleAction(action: Action) {
-  switch (action) {
-  case ActionEnum.GAME_STARTED: {
-    broadcast({ type: ACTION_ENUM[ActionEnum.GAME_STARTED]
-      broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] }, (c) => !c.gameId);
+const FLOP_LEN: number = 3;
+const HAND_LEN: number = 2;
+// 2 min
+const TURN_DEADLINE_SECS = 120;
 
-    break;
+function startGame(id: string) {
+	thisGame (c) => c.gameId === id;
+
+	// this game started
+	broadcast({ type: ACTION_MAP[ActionEnum.GAME_STARTED], gameId }, thisGame);
+
+    // all games broadcast: game started
+    const games = await GameRepository.findAvailableAll();
+    broadcast({ type: GamesEventEnum.GAMES_UPDATED, games: games ?? [] });
+	// xxx should games be a map, so we don't have to re-lookup...?
+	// xxx might expose unintended data to frontend
+
+	// deal community cards
+	const flop = await GameRepository.dealCards(id, CardLocation.COMMUNITY, FLOP_LEN);
+	if (!flop) {
+		// xxx we have problems... we've already committed a ton of state.
+		// handle gracefully
+		logger.error("dealing flop failed");
+		return;
+	}
+	broadcast({ 
+		type: ACTION_MAP[ActionEnum.DEAL_COMMUNITY], 
+		communityCards: flop,
+		gameId,
+	}, thisGame);
+
+	const game = await GameRepository.findById(id);
+	if (!game) {
+		// xxx
+		logger.error(`error finding game for gameId: ${id}`);
+		return;
+	}
+
+	// xxx expose in game model? how common is this?
+	const players = await GameRepository.getUsers(id);
+	if (!players) {
+		// xxx
+		logger.error(`error finding players for gameId: ${id}`);
+		return;
+	}
+	for (const p of players) {
+		// xxx have an animation for
+		const hand = await GameRepository.dealCards(id, CardLocation.HAND, HAND_LEN);
+		if (!hand) {
+			// xxx
+			logger.error(`error dealing hand for userId: ${p.user_id}`);
+			return;
+		}
+		broadcast({ 
+			type: ACTION_MAP[ActionEnum.DEAL_HAND], 
+			playerCards,
+			gameId,
+		}, (c) => c.userId=== p.user_user});
+	}
+
+	const nextGame = await.GameRepository.nextTurn(id);
+	broadcast({
+		type: ACTION_MAP[ActionEnum.NEXT_TURN],
+		game,
+		gameId,
+	}, thisGame);
+}
+
+function handleEvent(gameId: string, ev: GameEventBody): boolean {
+	const userId: string = ev.userId;
+  const action: Action = ev.action;
+  const value: Maybe<number> = ev.value;
+  let player = await GameRepository.getUser(userId);
+  if (!player) {
+		// xxx fatal, we don't expect this... handle better
+		logger.error(`failed to get user for userId: ${userId}`);
+		return false;
   }
-  case ActionEnum.DEAL_COMMUNITY: {
-    break;
-  }
-  case ActionEnum.DEAL_HAND: {
-    break;
-  }
-  case ActionEnum.BET: {
-    break;
-  }
-  case ActionEnum.CALL: {
-    break;
-  }
+  switch (action) {
+  case ActionEnum.BET: 
+  case ActionEnum.CALL:
   case ActionEnum.RAISE: {
-    break;
+	if (value == null) {
+		// "invalid bet amount"
+		return false;
+	}
+	player.last_bet = value;
+	ok = await GameRepository.updateBalance(gameId, userId, value);
+	if (!ok) {
+		// show "invalid bet" to frontend
+		return ok;
+	}			
+	amt = await GameRepository.updatePot(gameId, userId, value);
+	// in the case of a bet, we always validate that the user has the bet, so			
+	// always expect amt === value
+	if (amt !== value) {
+		// show "unable to add bet to pot" to frontend
+		return false;
+	}
+	ok = await GameRepository.updateUser(gameId, player);
+	if (!ok) {
+		// xxx
+		return ok;
+	}
+	break;
   }
-  case ActionEnum.CHECK: {
+  case ActionEnum.CHECK: {	// xxx does check ever affect balance?
+	// go next
     break;
   }
   case ActionEnum.FOLD: {
-    break;
+	player.last_bet = null;
+	// remove eligibility from all pots
+	amt = await GameRepository.removePotUser(id, userId);
+	if (amt == null) {
+		// xxx "unable to fold". very fatal, what do we do?
+		logger.error(`FATAL: unable to fold for userId (${userId}) in gameId (${id})`);
+		return false;
+	}
+	ok = await GameRepository.updateUser(gameId, player);
+	if (!ok) {
+		// xxx
+		return ok;
+	}
+	break;
   }
   case ActionEnum.ALL_IN: {
-    break;
-  }
-  case ActionEnum.SHOWDOWN: {
-    break;
-  }
-  case ActionEnum.PAYOUT: {
-    break;
-  }
-  case ActionEnum.GAME_ENDED: {
-    break;
-  }
-  case ActionEnum.PLAYER_JOINED: {
-    break;
-  }
-  case ActionEnum.PLAYER_LEFT: {
+	const amt = player.balance;
+	if (amt <= 0) {
+		// unexpected case, should already be validated against
+		return false;
+	}
+	const betAmt = await GameRepository.updatePot(gameId, player.user_id, amt);
+	if (betAmt != amt) {
+		logger.warn(`final bet amount (${betAmt}) did not match expected bet
     break;
   }
   default:
     logger.error(`invalid action: ${action}`);
 }
-*/
+
 
 /**
  * SSE endpoint for live game state.

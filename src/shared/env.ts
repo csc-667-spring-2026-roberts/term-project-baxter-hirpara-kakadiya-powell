@@ -92,6 +92,7 @@ export const ActionEnum = {
   GAME_ENDED: 11,
   PLAYER_JOINED: 12,
   PLAYER_LEFT: 13,
+  NEXT_TURN: 14,
 } as const satisfies Record<string, number>;
 export type Action = (typeof ActionEnum)[keyof typeof ActionEnum];
 
@@ -125,6 +126,7 @@ export const ACTION_MAP: Record<Action, string> = {
   [ActionEnum.GAME_ENDED]: "game_ended",
   [ActionEnum.PLAYER_JOINED]: "player_joined",
   [ActionEnum.PLAYER_LEFT]: "player_left",
+  [ActionEnum.NEXT_TURN]: "next_turn",
 };
 
 export const GamesEventEnum = {

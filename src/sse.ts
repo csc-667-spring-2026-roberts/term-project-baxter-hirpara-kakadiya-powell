@@ -51,7 +51,7 @@ export function removeClient(id: number): void {
 }
 
 export function broadcast(data: object, pred?: (client: Client) => boolean): void {
-  if (!pred) {
+  if (pred == null) {
     pred = (): boolean => true;
   }
 

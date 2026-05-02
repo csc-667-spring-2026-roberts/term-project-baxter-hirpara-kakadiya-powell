@@ -8,6 +8,7 @@
 
 import { Request } from "express";
 import { Action } from "./shared/env.js";
+import { Maybe } from "./shared/types.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -35,5 +36,8 @@ export type UserParams = {
 };
 
 export type GameEventBody = {
+	userId: string;
   action: Action;
+  // value of action (if action has value)
+  value: Maybe<number>;
 };
